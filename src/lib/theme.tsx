@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type Theme = 'dark' | 'light';
-const KEY = 'scs_theme';
+const KEY = 'slx_theme';
 
 const initial = (): Theme => {
   try {

@@ -17,14 +17,13 @@ type Offer = {
   required_categories: string[] | null; max_discount_pence: number | null; applies_to: 'rental' | 'subtotal'; priority: number; stackable: boolean;
 };
 
-const CATEGORIES = ['Supercar', 'Convertible', 'SUV', 'Luxury'];
 
 /** The conditions in words, for the list. */
 const conditions = (o: Offer) => [
   o.min_vehicles > 1 || o.max_vehicles ? `${o.min_vehicles}${o.max_vehicles ? `–${o.max_vehicles}` : '+'} vehicles` : null,
   o.vehicle_categories?.length ? o.vehicle_categories.join(', ') : null,
   o.required_categories?.length ? `needs ${o.required_categories.join(' + ')}` : null,
-  o.required_vehicle_ids?.length ? `needs ${o.required_vehicle_ids.length} set car${o.required_vehicle_ids.length === 1 ? '' : 's'}` : null,
+  o.required_vehicle_ids?.length ? `needs ${o.required_vehicle_ids.length} set vehicle${o.required_vehicle_ids.length === 1 ? '' : 's'}` : null,
   o.min_booking_pence ? `over ${gbp(o.min_booking_pence)}` : null,
   o.applies_to === 'rental' ? 'rental only' : null,
   o.max_discount_pence ? `max ${gbp(o.max_discount_pence)}` : null,
@@ -85,7 +84,7 @@ export default function Offers() {
 }
 
 function OfferForm({ offer, onClose, onSaved }: { offer: Offer | null; onClose: () => void; onSaved: () => void }) {
-  const { data: fleet } = useApi<{ items: { id: string; make: string; model: string }[] }>('/vehicles?limit=200');
+  const { data: fleet } = useApi<{ items: { id: string; make: string; model: string; category: string }[] }>('/vehicles?limit=200');
   const { data: ev } = useApi<{ items: { id: string; title: string }[] }>('/event-types');
   const [title, setTitle] = useState(offer?.title ?? '');
   const [code, setCode] = useState(offer?.code ?? '');
@@ -132,9 +131,11 @@ function OfferForm({ offer, onClose, onSaved }: { offer: Offer | null; onClose: 
     if (ok) onSaved();
   };
 
+  // The categories of the vehicles in the fleet (plus any an existing offer already uses).
+  const CATEGORIES = [...new Set([...(fleet?.items ?? []).map((v) => v.category), ...categories, ...requiredCategories])].sort();
   return (
     <Drawer title={offer ? 'Edit offer' : 'New offer'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy || !!invalid} onClick={save}>{busy ? 'Saving…' : 'Save offer'}</button></>}>
-      <TextField label="Name *" value={title} onChange={setTitle} error={fieldErrors['title']} placeholder="e.g. Book 3 cars, save 10%" />
+      <TextField label="Name *" value={title} onChange={setTitle} error={fieldErrors['title']} placeholder="e.g. Book 3 vehicles, save 10%" />
       <SelectField label="How it applies" value={mode} onChange={(v) => setMode(v as 'auto' | 'code' | 'shown')} options={[
         { value: 'auto', label: 'Automatically, when the booking meets the conditions' },
         { value: 'code', label: 'With a coupon code the customer enters' },
@@ -155,22 +156,22 @@ function OfferForm({ offer, onClose, onSaved }: { offer: Offer | null; onClose: 
       </div>
       <h3 className="display" style={{ margin: '8px 0 0', fontSize: 16 }}>Vehicles in the booking</h3>
       <div className="form-grid">
-        <NumberField label="At least (vehicles) *" value={minVehicles} onChange={setMinVehicles} min={1} max={50} hint="Counted among the eligible cars below" />
+        <NumberField label="At least (vehicles) *" value={minVehicles} onChange={setMinVehicles} min={1} max={50} hint="Counted among the eligible vehicles below" />
         <NumberField label="At most (vehicles)" value={maxVehicles} onChange={setMaxVehicles} min={1} max={50} hint="Blank = no limit" error={badRange ? 'Must be at least the minimum' : undefined} />
-        <SelectField label="Discount applies to" value={appliesTo} onChange={setAppliesTo} options={[{ value: 'rental', label: 'Vehicle rental charges only' }, { value: 'subtotal', label: 'Everything (rental, driver, add-ons)' }]} />
+        <SelectField label="Discount applies to" value={appliesTo} onChange={setAppliesTo} options={[{ value: 'rental', label: 'Vehicle rental charges only' }, { value: 'subtotal', label: 'Everything (rental, chauffeur, extras)' }]} />
         <NumberField label="Priority" value={priority} onChange={setPriority} min={-100} max={100} hint="Higher wins when several offers qualify" />
       </div>
       <div className="field"><label>Eligible categories</label><div className="row wrap">{CATEGORIES.map((cat) => <CheckField key={cat} label={cat} checked={categories.includes(cat)} onChange={(on) => toggle(categories, setCategories, cat, on)} />)}</div>
         <span className="muted small">None ticked = every category.</span></div>
       <div className="field"><label>Must be booked together</label><div className="row wrap">{CATEGORIES.map((cat) => <CheckField key={cat} label={`a ${cat}`} checked={requiredCategories.includes(cat)} onChange={(on) => toggle(requiredCategories, setRequiredCategories, cat, on)} />)}</div>
-        <span className="muted small">For combination offers, e.g. a Supercar with an SUV.</span></div>
+        <span className="muted small">For combination offers, e.g. a Luxury Saloon with a People Carrier.</span></div>
       {fleet?.items.length ? (
-        <div className="field"><label>Must include these cars</label><div className="form-grid">{fleet.items.map((v) => <CheckField key={v.id} label={`${v.make} ${v.model}`} checked={requiredCars.includes(v.id)} onChange={(on) => toggle(requiredCars, setRequiredCars, v.id, on)} />)}</div></div>
+        <div className="field"><label>Must include these vehicles</label><div className="form-grid">{fleet.items.map((v) => <CheckField key={v.id} label={`${v.make} ${v.model}`} checked={requiredCars.includes(v.id)} onChange={(on) => toggle(requiredCars, setRequiredCars, v.id, on)} />)}</div></div>
       ) : null}
       <ToggleField label="Can be combined with other offers" checked={stackable} onChange={setStackable} onText="Yes" offText="No" hint="Offers only stack when every applied offer allows it" />
-      <CheckField label="Eligible: all cars" checked={allCars} onChange={setAllCars} />
+      <CheckField label="Eligible: all vehicles" checked={allCars} onChange={setAllCars} />
       {!allCars ? (fleet?.items ?? []).map((v) => <CheckField key={v.id} label={`${v.make} ${v.model}`} checked={vehicleIds.includes(v.id)} onChange={(c) => setVehicleIds((p) => (c ? [...p, v.id] : p.filter((x) => x !== v.id)))} />) : null}
-      <CheckField label="Applies to all events" checked={allEvents} onChange={setAllEvents} />
+      <CheckField label="Applies to all services" checked={allEvents} onChange={setAllEvents} />
       {!allEvents ? (ev?.items ?? []).map((e) => <CheckField key={e.id} label={e.title} checked={eventIds.includes(e.id)} onChange={(c) => setEventIds((p) => (c ? [...p, e.id] : p.filter((x) => x !== e.id)))} />) : null}
       <ToggleField label="Offer status" checked={active} onChange={setActive} />
       <ErrorBox error={error} />

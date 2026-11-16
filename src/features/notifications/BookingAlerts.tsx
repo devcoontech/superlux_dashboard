@@ -18,9 +18,9 @@ type Alert = { orderId: string; bookingId: string; ref: string; customer: string
 export const NEW_BOOKINGS_EVENT = 'scs:new-bookings';
 const POLL_MS = 20_000;
 const POPUP_MS = 12_000;
-const SEEN_KEY = 'scs_bookings_seen_at';
-const LIST_KEY = 'scs_booking_alerts';
-const ASKED_KEY = 'scs_alerts_asked';
+const SEEN_KEY = 'slx_bookings_seen_at';
+const LIST_KEY = 'slx_booking_alerts';
+const ASKED_KEY = 'slx_alerts_asked';
 
 const store = {
   get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },

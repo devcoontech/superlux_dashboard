@@ -53,7 +53,7 @@ export default function Vehicles() {
   const { data, error, loading, reload } = useApi<{ items: VehicleRow[]; total: number }>('/vehicles' + qs({ q: dq, status, published, booking, limit: 25, offset }));
 
   return (
-    <Panel title="Fleet" hint="Every car the company offers" action={<button className="btn gold" onClick={() => go('vehicles/new')}><FiPlus /> Add vehicle</button>}>
+    <Panel title="Fleet" hint="Every vehicle the company offers" action={<button className="btn gold" onClick={() => go('vehicles/new')}><FiPlus /> Add vehicle</button>}>
       <div className="filters">
         <TextField label="Search" value={q} onChange={(v) => { setQ(v); setOffset(0); }} placeholder="Make, model or fleet ID" />
         <SelectField label="Status" value={status} onChange={(v) => { setStatus(v); setOffset(0); }} options={[{ value: '', label: 'All' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }, { value: 'maintenance', label: 'Maintenance' }]} />
@@ -66,7 +66,7 @@ export default function Vehicles() {
       {data?.items.length ? (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Car</th><th>Fleet ID</th><th>City</th><th className="num">Base rate</th><th>Bookings</th><th>Status</th><th>Listing</th><th className="actions-cell" /></tr></thead>
+            <thead><tr><th>Vehicle</th><th>Fleet ID</th><th>City</th><th className="num">Base rate</th><th>Bookings</th><th>Status</th><th>Listing</th><th className="actions-cell" /></tr></thead>
             <tbody>
               {data.items.map((v) => {
                 const img = v.images.find((i) => i.isCover) ?? v.images[0];

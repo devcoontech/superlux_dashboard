@@ -27,9 +27,9 @@ export function Details({ row, onSaved }: { row: Row; onSaved: (r: Row) => void 
   return (
     <>
       <Panel title="Basic information"><BasicsFields f={f} set={set} err={err(errors.basics)} /></Panel>
-      <Panel title="Specifications"><SpecsFields f={f} set={set} err={err(errors.specs)} /></Panel>
-      <Panel title="Standard price" hint="Packages, event rates, per-mile and special-date prices are on the Pricing tab"><PricingFields f={f} set={set} err={err(errors.pricing)} /></Panel>
-      <Panel title="Availability and location"><AvailabilityFields f={f} set={set} err={err(errors.availability)} /></Panel>
+      <Panel title="Capacity and features"><SpecsFields f={f} set={set} err={err(errors.specs)} /></Panel>
+      <Panel title="Hourly rate" hint="Packages, service rates and special-date prices are on the Pricing tab"><PricingFields f={f} set={set} err={err(errors.pricing)} /></Panel>
+      <Panel title="Availability and location" hint="How the website offers this vehicle"><AvailabilityFields f={f} set={set} err={err(errors.availability)} /></Panel>
       <ErrorBox error={error} />
       <div className="row">
         <button className="btn gold" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button>

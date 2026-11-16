@@ -5,7 +5,7 @@ type Finance = {
   delivery: null | { status: 'pending' | 'confirmed'; amountPence: number; distanceMiles: number | null; ratePerMilePence: number | null };
 };
 export type Charge = {
-  id: string; kind: 'delivery' | 'adjustment'; status: 'pending' | 'confirmed' | 'void'; amountPence: number; description: string; address: string | null; distanceMiles: number | null;
+  id: string; kind: 'delivery' | 'adjustment' | 'extra'; category?: string | null; quantity?: number | null; details?: string | null; status: 'pending' | 'confirmed' | 'void'; amountPence: number; description: string; address: string | null; distanceMiles: number | null;
   ratePerMilePence: number | null; calculatedPence: number | null; createdAt: string; approvedBy: string | null; voidedAt: string | null; voidedBy: string | null; voidReason: string | null;
 };
 type Doc = { id: string; number: string; kind: string; amountPence: number; bookingTotalPence: number; paidToDatePence: number; balancePence: number; issuedAt: string };
@@ -15,7 +15,16 @@ export type Payment = {
 };
 export type Detail = {
   id: string; ref: string; status: string; paymentStatus: string; startAt: string; endAt: string; hours: number; experience: string; address: string | null; chauffeur: boolean;
-  driverOption: 'with_driver' | 'self_drive'; source: 'customer_app' | 'admin'; createdByName: string | null;
+  driverOption: 'with_driver' | 'self_drive'; source: 'customer_app' | 'admin' | 'website'; createdByName: string | null;
+  journey: {
+    journeyType: 'one_way' | 'return' | null; leg: 'outbound' | 'return' | null; stops: string | null; flightNumber: string | null; terminal: string | null;
+    passengers: number | null; luggageLarge: number | null; luggageSmall: number | null; childSeats: number | null; specialRequests: string | null;
+    leadPassengerName: string | null; leadPassengerPhone: string | null; company: string | null; onBehalf: boolean;
+    paymentPreference: string | null; paymentMethodPreference: string | null; driveMinutes: number | null; routeMeasured: boolean;
+    pickupDetails?: string | null; dropoffDetails?: string | null;
+  };
+  termsAcceptances?: { version: string; statement: string; acceptedAt: string; ip: string | null; userAgent: string | null; bookingRef: string; title: string }[];
+
   dispatchStatus: string; totalPence: number; paidPence: number; refundedPence: number; depositDuePence: number; occasion: string | null; children: number | null;
   customerNotes: string | null; pickupAddress: string | null; dropoffAddress: string | null; points: { address: Pt | null; pickup: Pt | null; dropoff: Pt | null }; routeMiles: number | null; deliveryMiles: number | null; consents: { guardian?: boolean; terms?: boolean; marketingPhotos?: boolean; at?: string } | null; cancelReason: string | null; holdExpiresAt: string | null; createdAt: string;
   customer: { id: string; name: string; email: string; phone: string | null }; vehicle: { id: string; name: string };
@@ -50,5 +59,5 @@ export type ExtQuote = {
 export type Dialog =
   | { t: 'status'; to: string; label: string; reason?: boolean; danger?: boolean; unpaidOption?: boolean }
   | { t: 'reschedule' } | { t: 'vehicle' } | { t: 'driver' } | { t: 'removeDriver' } | { t: 'manualPay' } | { t: 'refund'; paymentId: string; max: number }
-  | { t: 'delivery' } | { t: 'adjust' } | { t: 'voidCharge'; charge: Charge } | { t: 'payStatus'; payment: Payment }
+  | { t: 'delivery' } | { t: 'adjust' } | { t: 'extra' } | { t: 'payRequest' } | { t: 'voidCharge'; charge: Charge } | { t: 'payStatus'; payment: Payment }
   | { t: 'extend' } | { t: 'addVehicle' } | { t: 'decideExt'; ext: Extension; approve: boolean };

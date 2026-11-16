@@ -64,8 +64,8 @@ export default function Overview() {
           <div className="grid g-4">
             <Stat icon={FiClock} label="Pending requests" value={String(data.bookings.pending)} delta="Awaiting your decision" />
             <Stat icon={FiCheckCircle} label="Confirmed" value={String(data.bookings.confirmed)} delta={`${data.bookings.ongoing} in progress · ${data.bookings.completed} completed`} />
-            <Stat icon={FiTruck} label="Available now" value={`${data.fleet.availableNow} / ${data.fleet.active}`} delta={`${data.fleet.total} cars · ${data.fleet.inactive} out of service · ${data.fleet.published} published`} />
-            <Stat icon={FiUserX} label="Need a driver" value={String(data.attention.driverAssignmentsNeeded)} delta="Chauffeur bookings in next 7 days" trend={data.attention.driverAssignmentsNeeded ? 'down' : undefined} />
+            <Stat icon={FiTruck} label="Available now" value={`${data.fleet.availableNow} / ${data.fleet.active}`} delta={`${data.fleet.total} vehicles · ${data.fleet.inactive} out of service · ${data.fleet.published} published`} />
+            <Stat icon={FiUserX} label="Need a chauffeur" value={String(data.attention.driverAssignmentsNeeded)} delta="Chauffeur bookings in next 7 days" trend={data.attention.driverAssignmentsNeeded ? 'down' : undefined} />
           </div>
           <div className="grid g-main">
             <Panel title="Bookings per day" hint={`${data.bookings.cancelled} cancelled or rejected in period`}>
@@ -75,14 +75,14 @@ export default function Overview() {
               />
             </Panel>
             <Panel title="Fleet utilisation" hint="Booked hours as a share of opening hours">
-              {data.utilization.length ? <HBars data={data.utilization.map((u) => ({ label: u.name, value: u.percent }))} format={(n) => n + '%'} /> : <Empty icon={FiActivity} title="No active cars" />}
+              {data.utilization.length ? <HBars data={data.utilization.map((u) => ({ label: u.name, value: u.percent }))} format={(n) => n + '%'} /> : <Empty icon={FiActivity} title="No active vehicles" />}
             </Panel>
           </div>
           <Panel title="Next 7 days" hint="Upcoming and pending bookings">
             {data.upcoming.length ? (
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Reference</th><th>When</th><th>Car</th><th>Customer</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Reference</th><th>When</th><th>Vehicle</th><th>Customer</th><th>Status</th></tr></thead>
                   <tbody>
                     {data.upcoming.map((b) => (
                       <tr key={b.id} className="click" onClick={() => go('bookings/' + b.id)}>

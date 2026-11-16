@@ -49,7 +49,7 @@ export default function Payments() {
         <div className="filters">
           <TextField label="Search" value={q} onChange={(v) => reset(() => setQ(v))} placeholder="Booking ref, Stripe ID, customer" />
           <SelectField label="Status" value={status} onChange={(v) => reset(() => setStatus(v))} options={[{ value: '', label: 'All' }, ...['pending', 'succeeded', 'failed', 'canceled'].map((s) => ({ value: s, label: humanize(s) }))]} />
-          <SelectField label="Source" value={source} onChange={(v) => reset(() => setSource(v))} options={[{ value: '', label: 'All' }, { value: 'stripe', label: 'Stripe' }, { value: 'manual', label: 'Manual' }]} />
+          <SelectField label="Source" value={source} onChange={(v) => reset(() => setSource(v))} options={[{ value: '', label: 'All' }, { value: 'stripe', label: 'Stripe (card, Klarna)' }, { value: 'paypal', label: 'PayPal' }, { value: 'manual', label: 'Manual' }]} />
           <TextField label="From" type="date" value={from} onChange={(v) => reset(() => setFrom(v))} />
           <TextField label="To" type="date" value={to} onChange={(v) => reset(() => setTo(v))} />
         </div>
@@ -64,14 +64,14 @@ export default function Payments() {
                 <td>{fmtDateTime(p.paidAt ?? p.createdAt)}</td>
                 <td><button className="link-btn" onClick={() => go('bookings/' + p.bookingId)}>{p.bookingRef}</button></td>
                 <td>{p.customer}</td>
-                <td>{p.source === 'stripe' ? <>Card online {p.verified ? <Badge status="succeeded" label="Verified" /> : null}</> : <>{p.method === 'card_terminal' ? 'Card' : humanize(p.method)} <Badge status="draft" label="Recorded by staff" /></>}<div className="cell-sub">{p.source === 'stripe' ? p.providerRef : `${p.manualReference ?? ''} · ${p.recordedBy}`}</div></td>
+                <td>{p.source !== 'manual' ? <>{p.method === 'klarna' ? 'Klarna' : p.method === 'paypal' ? 'PayPal' : 'Card online'} {p.verified ? <Badge status="succeeded" label="Verified" /> : null}</> : <>{p.method === 'card_terminal' ? 'Card' : humanize(p.method)} <Badge status="draft" label="Recorded by staff" /></>}<div className="cell-sub">{p.source !== 'manual' ? p.providerRef : `${p.manualReference ?? ''} · ${p.recordedBy}`}</div></td>
                 <td><Badge status={p.status} /></td>
                 <td className="num">{gbp(p.amountPence)}</td>
                 <td className="num">{p.refundedPence ? gbp(p.refundedPence) : '—'}</td>
                 <td>{p.source === 'manual' ? <span className="muted">n/a</span> : p.reconciledAt ? <Badge status="succeeded" label="Yes" /> : <span className="muted">No</span>}</td>
                 <td className="num"><div className="row" style={{ justifyContent: 'flex-end' }}>
                   {p.receiptId ? <button className="btn sm" title={p.receiptNumber ?? ''} disabled={busy} onClick={() => run(() => openDocument(`/invoices/${p.receiptId}/document`))}>Receipt</button> : null}
-                  {p.source === 'stripe' ? <button className="btn sm" disabled={busy} onClick={() => reconcile(p)}>Check with Stripe</button> : null}
+                  {p.source !== 'manual' ? <button className="btn sm" disabled={busy} onClick={() => reconcile(p)}>Check with {p.source === 'paypal' ? 'PayPal' : 'Stripe'}</button> : null}
                   {p.status === 'succeeded' && p.amountPence - p.refundedPence > 0 ? <button className="btn sm" onClick={() => setRefunding(p)}>Refund</button> : null}
                 </div></td>
               </tr>
@@ -91,7 +91,7 @@ function RefundDialog({ p, onClose, onDone }: { p: P; onClose: () => void; onDon
   const [reason, setReason] = useState('');
   return (
     <ConfirmDialog title={`Refund ${p.bookingRef}`} danger confirmLabel="Issue refund" onClose={onClose}
-      message={`Up to ${gbp(max)}. ${p.source === 'stripe' ? 'The refund is sent to Stripe.' : 'This records a manual refund; return the money yourself.'}`}
+      message={`Up to ${gbp(max)}. ${p.source !== 'manual' ? `The refund is sent to ${p.source === 'paypal' ? 'PayPal' : 'Stripe'}.` : 'This records a manual refund; return the money yourself.'}`}
       extra={<><MoneyField label="Amount" value={amount} onChange={setAmount} /><TextField label="Reason *" value={reason} onChange={setReason} multiline /></>}
       onConfirm={async () => {
         if (!amount || !reason.trim()) throw new Error('Enter an amount and a reason.');

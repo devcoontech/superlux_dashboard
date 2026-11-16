@@ -91,7 +91,7 @@ export function EmailSettings({ s, secrets, source, onSaved }: { s: S; secrets: 
           <div className="full"><ToggleField label="Secure connection (TLS from the start)" hint="On for port 465. Off for port 587, which upgrades the connection automatically." checked={f.v['email.secure'] as boolean} onChange={(v) => f.set('email.secure', v)} onText="On" offText="Off" /></div>
           <TextField label="Username" value={f.v['email.user'] as string} onChange={(v) => f.set('email.user', v)} />
           <TextField label="Password" type="password" value={password} onChange={setPassword} placeholder={pw.configured ? `Saved (ends ${pw.hint}). Type to replace.` : ''} hint="Stored encrypted and never shown again" />
-          <TextField label="From name" value={f.v['email.fromName'] as string} onChange={(v) => f.set('email.fromName', v)} placeholder="Supercarstars" />
+          <TextField label="From name" value={f.v['email.fromName'] as string} onChange={(v) => f.set('email.fromName', v)} placeholder="Superluxe Chauffeurs" />
           <TextField label="From address" value={f.v['email.fromAddress'] as string} onChange={(v) => f.set('email.fromAddress', v)} placeholder="bookings@yourdomain.com" error={fromOk ? undefined : 'Enter a valid email address'} hint="Must be allowed by your provider (a verified sender or domain)" />
         </div>
         <div style={{ marginTop: 16 }}><ErrorBox error={error} /></div>

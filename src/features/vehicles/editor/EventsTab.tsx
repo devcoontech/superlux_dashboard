@@ -12,14 +12,14 @@ export function EventsTab({ row, events, reload }: { row: Row; events: { id: str
   useEffect(() => setSel(row.event_type_ids), [row.event_type_ids]);
   const { run, busy, error } = useAction();
   return (
-    <Panel title="Supported events" hint="Customers only see this car for the events ticked here.">
-      {!events.length ? <Empty icon={FiStar} title="No event types yet">Create event types under Events first.</Empty> : (
+    <Panel title="Services offered" hint="Customers can only book this vehicle for the services ticked here.">
+      {!events.length ? <Empty icon={FiStar} title="No services yet">Create services under Services first.</Empty> : (
         <div className="form-grid">
           {events.map((e) => <CheckField key={e.id} label={e.title} checked={sel.includes(e.id)} onChange={(c) => setSel((p) => (c ? [...p, e.id] : p.filter((x) => x !== e.id)))} />)}
         </div>
       )}
       <div style={{ marginTop: 16 }}><ErrorBox error={error} /></div>
-      <div style={{ marginTop: 16 }}><button className="btn gold" disabled={busy} onClick={() => run(async () => { await api(`/vehicles/${row.id}/event-types`, { method: 'PUT', body: { eventTypeIds: sel } }); reload(); }, 'Events saved')}>Save events</button></div>
+      <div style={{ marginTop: 16 }}><button className="btn gold" disabled={busy} onClick={() => run(async () => { await api(`/vehicles/${row.id}/event-types`, { method: 'PUT', body: { eventTypeIds: sel } }); reload(); }, 'Services saved')}>Save services</button></div>
     </Panel>
   );
 }

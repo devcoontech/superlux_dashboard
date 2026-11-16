@@ -26,15 +26,15 @@ export default function Drivers() {
     <>
       <div className="row between wrap">
         <Tabs value={tab} onChange={setTab} items={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]} />
-        <button className="btn gold" onClick={() => setEditing('new')}><FiPlus /> Add driver</button>
+        <button className="btn gold" onClick={() => setEditing('new')}><FiPlus /> Add chauffeur</button>
       </div>
-      <Panel title="Drivers" hint="Assign drivers from a booking. Overlapping jobs are blocked, including travel time.">
+      <Panel title="Chauffeurs" hint="Assign chauffeurs from a booking. Overlapping jobs are blocked, including travel time.">
         <ErrorBox error={error} retry={reload} /><ErrorBox error={actError} />
         {loading && !data ? <Loading /> : null}
-        {data && !data.items.length ? <Empty icon={FiUsers} title={tab === 'active' ? 'No active drivers' : 'No inactive drivers'} /> : null}
+        {data && !data.items.length ? <Empty icon={FiUsers} title={tab === 'active' ? 'No active chauffeurs' : 'No inactive chauffeurs'} /> : null}
         {data?.items.length ? (
           <div className="table-wrap"><table>
-            <thead><tr><th>Driver</th><th>Contact</th><th>Employment</th><th>Hours</th><th className="num">Upcoming jobs</th><th>Licence</th><th>Status</th><th className="actions-cell" /></tr></thead>
+            <thead><tr><th>Chauffeur</th><th>Contact</th><th>Employment</th><th>Hours</th><th className="num">Upcoming jobs</th><th>Licence</th><th>Status</th><th className="actions-cell" /></tr></thead>
             <tbody>{data.items.map((d) => {
               const expiring = d.license_expiry && new Date(d.license_expiry) < new Date(Date.now() + 60 * 86400000);
               return (
@@ -54,7 +54,7 @@ export default function Drivers() {
           </table></div>
         ) : null}
       </Panel>
-      {deleting ? <DeleteDialog what={deleting.full_name} path={`/drivers/${deleting.id}`} note="Drivers with assignment history cannot be deleted (it is kept as a record). Switch them to Inactive instead." onClose={() => setDeleting(null)} onDone={reload} /> : null}
+      {deleting ? <DeleteDialog what={deleting.full_name} path={`/drivers/${deleting.id}`} note="Chauffeurs with assignment history cannot be deleted (it is kept as a record). Switch them to Inactive instead." onClose={() => setDeleting(null)} onDone={reload} /> : null}
       {viewing ? <DriverView d={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} /> : null}
       {editing ? <DriverForm d={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} /> : null}
     </>
@@ -64,7 +64,7 @@ export default function Drivers() {
 function DriverView({ d, onClose, onEdit }: { d: Driver; onClose: () => void; onEdit: () => void }) {
   const { data, error, loading } = useApi<{ items: { id: string; bookingId: string; ref: string; status: string; startAt: string; endAt: string; active: boolean; endedReason: string | null }[] }>(`/drivers/${d.id}/assignments`);
   return (
-    <Drawer title={d.full_name} onClose={onClose} footer={<button className="btn gold" onClick={onEdit}>Edit driver</button>}>
+    <Drawer title={d.full_name} onClose={onClose} footer={<button className="btn gold" onClick={onEdit}>Edit chauffeur</button>}>
       <dl className="kv">
         <dt>Phone</dt><dd>{d.phone}</dd><dt>Email</dt><dd>{d.email ?? '—'}</dd><dt>Address</dt><dd>{d.address ?? '—'}</dd><dt>Employment</dt><dd>{d.employment}</dd>
         {'license_number' in d ? <><dt>Licence no.</dt><dd>{d.license_number ?? '—'}</dd><dt>Licence type</dt><dd>{d.license_type ?? '—'}</dd></> : null}
@@ -108,7 +108,7 @@ function DriverForm({ d, onClose, onSaved }: { d: Driver | null; onClose: () => 
   const { run, busy, error, fieldErrors } = useAction();
   const today = new Date().toISOString().slice(0, 10);
   const errors: Record<string, string> = {};
-  if (!fullName.trim()) errors.fullName = 'Enter the driver\u2019s name';
+  if (!fullName.trim()) errors.fullName = 'Enter the chauffeur\u2019s name';
   if (phone.trim().length < 5) errors.phone = 'Enter a phone number';
   if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = 'Enter a valid email address';
   if (hours && end <= start) errors.end = 'Must be after the start time';
@@ -139,11 +139,11 @@ function DriverForm({ d, onClose, onSaved }: { d: Driver | null; onClose: () => 
         }
       }
       return saved;
-    }, 'Driver saved');
+    }, 'Chauffeur saved');
     if (ok) onSaved();
   };
   return (
-    <Drawer title={d ? `Edit ${d.full_name}` : 'New driver'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : d ? 'Save changes' : 'Add driver'}</button></>}>
+    <Drawer title={d ? `Edit ${d.full_name}` : 'New chauffeur'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : d ? 'Save changes' : 'Add chauffeur'}</button></>}>
       <section className="dr-section">
         <h4>Personal information</h4>
         <TextField label="Full name *" value={fullName} onChange={setFullName} error={e('fullName')} />
@@ -158,7 +158,7 @@ function DriverForm({ d, onClose, onSaved }: { d: Driver | null; onClose: () => 
           <h4>Driving licence</h4>
           <div className="form-grid">
             <TextField label="Licence number" value={licence} onChange={(v) => setLicence(v.toUpperCase())} hint="Visible to authorised staff only" />
-            <TextField label="Licence type" value={licenceType} onChange={setLicenceType} placeholder="e.g. B, C1" hint="Categories the driver holds" />
+            <TextField label="Licence type" value={licenceType} onChange={setLicenceType} placeholder="e.g. B, C1" hint="Categories the chauffeur holds" />
             <TextField label="Expiry date" type="date" value={expiry} onChange={setExpiry} />
           </div>
           {expired ? <div className="error-box">This licence expired on {fmtDate(expiry)}. Update the expiry date once the driver has renewed it.</div> : null}
@@ -170,7 +170,7 @@ function DriverForm({ d, onClose, onSaved }: { d: Driver | null; onClose: () => 
         <SelectField label="Employment" value={employment} onChange={setEmployment} options={[{ value: 'employee', label: 'Employee' }, { value: 'contractor', label: 'Contractor' }]} />
         <CheckField label="Only available during set hours" checked={hours} onChange={setHours} />
         {hours ? <div className="form-grid"><TextField label="From" type="time" value={start} onChange={setStart} /><TextField label="Until" type="time" value={end} onChange={setEnd} error={e('end')} /></div> : null}
-        <ToggleField label="Driver status" checked={active} onChange={setActive} hint="Inactive drivers cannot be assigned. Reassign upcoming jobs first." />
+        <ToggleField label="Chauffeur status" checked={active} onChange={setActive} hint="Inactive chauffeurs cannot be assigned. Reassign upcoming jobs first." />
         <TextField label="Notes" value={notes} onChange={setNotes} multiline />
       </section>
       <ErrorBox error={error} />

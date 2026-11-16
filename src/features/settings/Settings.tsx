@@ -9,16 +9,19 @@ import { BookingRules } from './BookingRules';
 import { TaxSettings } from './TaxSettings';
 import { Payments } from './PaymentSettings';
 import { Audit } from './AuditLog';
+import { BrandingSettings } from './BrandingSettings';
+import { ChargeTypes } from './ChargeTypes';
 
 export default function Settings() {
-  const [tab, setTab] = useState<'business' | 'booking' | 'tax' | 'payments' | 'email' | 'audit'>('business');
+  const [tab, setTab] = useState<'business' | 'booking' | 'charges' | 'tax' | 'payments' | 'email' | 'audit'>('business');
   const { data, error, loading, reload } = useApi<Payload>('/settings');
   return (
     <>
-      <Tabs value={tab} onChange={setTab} items={[{ value: 'business', label: 'Business details' }, { value: 'booking', label: 'Booking rules' }, { value: 'tax', label: 'Tax' }, { value: 'payments', label: 'Payments and Stripe' }, { value: 'email', label: 'Email (SMTP)' }, { value: 'audit', label: 'Audit log' }]} />
+      <Tabs value={tab} onChange={setTab} items={[{ value: 'business', label: 'Business details' }, { value: 'booking', label: 'Booking rules' }, { value: 'charges', label: 'Additional charges' }, { value: 'tax', label: 'Tax' }, { value: 'payments', label: 'Payments' }, { value: 'email', label: 'Email (SMTP)' }, { value: 'audit', label: 'Audit log' }]} />
       <ErrorBox error={error} retry={reload} />
       {loading && !data ? <Loading /> : null}
-      {data && tab === 'business' ? <Business key={JSON.stringify(data.settings)} s={data.settings} onSaved={reload} /> : null}
+      {data && tab === 'business' ? <><Business key={JSON.stringify(data.settings)} s={data.settings} onSaved={reload} /><BrandingSettings key={'b' + JSON.stringify(data.settings)} s={data.settings} onSaved={reload} /></> : null}
+      {tab === 'charges' ? <ChargeTypes /> : null}
       {data && tab === 'booking' ? <BookingRules key={JSON.stringify(data.settings)} s={data.settings} onSaved={reload} /> : null}
       {data && tab === 'tax' ? <TaxSettings key={JSON.stringify(data.settings)} s={data.settings} onSaved={reload} /> : null}
       {data && tab === 'payments' ? <Payments s={data.settings} secrets={data.secrets} onSaved={reload} /> : null}

@@ -20,7 +20,7 @@ export function ManualPay({ b, outstanding, onClose, onDone }: { b: Detail; outs
   const purpose = b.finance.netPaidPence === 0 && b.finance.depositMode && amount != null && amount < outstanding ? 'deposit' : b.finance.netPaidPence > 0 ? 'balance' : 'payment';
   return (
     <ConfirmDialog title="Record a payment" confirmLabel="Record payment" onClose={onClose}
-      message="For money taken outside the app. It is saved under your name and labelled as recorded by staff, never as a verified online card payment."
+      message="For money taken outside the website. It is saved under your name and labelled as recorded by staff, never as a verified online card payment."
       extra={<>
         <MoneyField label="Amount received" value={amount} onChange={setAmount} hint={`Outstanding ${gbp(outstanding)}${b.finance.depositMode && b.finance.dueNowPence ? ` · deposit still due ${gbp(b.finance.dueNowPence)}` : ''}`} />
         <div className="form-grid">

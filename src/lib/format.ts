@@ -22,7 +22,13 @@ export const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('en-GB'
 export const ymd = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d);
 export const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 
-export const humanize = (s: string) => s.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase());
+/** Status and code words as staff read them. Chauffeur terms where the stored value still says "driver". */
+const WORDS: Record<string, string> = {
+  driver_assigned: 'Chauffeur assigned', with_driver: 'With chauffeur', self_drive: 'Self-drive', service_started: 'Passenger on board',
+  service_complete: 'Journey complete', en_route: 'En route to pick-up', arrived: 'Arrived at pick-up', not_dispatched: 'Not dispatched',
+  customer_app: 'Customer app', website: 'Website', one_way: 'One way', later: 'Pay later (old option)', full: 'Card, in full', deposit: 'Card deposit', klarna: 'Klarna (financing)', paypal: 'PayPal (financing)',
+};
+export const humanize = (s: string) => WORDS[s] ?? s.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase());
 
 /** London offset-aware ISO for a local date + hour, used when blocking calendar slots. */
 export function londonIso(date: string, hour: number): string {

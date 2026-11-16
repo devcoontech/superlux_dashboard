@@ -22,13 +22,13 @@ export default function Login() {
   return (
     <div className="login">
       <div className="login-art">
-        <img src="/logo.png" alt="" />
-        <h2 className="tagline">Unforgettable supercar experiences</h2>
-        <p>Manage the fleet, bookings, drivers and payments from one place.</p>
+        <img src="/logo.svg" alt="" />
+        <h2 className="tagline">Arrive in a class of your own</h2>
+        <p>Manage the fleet, bookings, chauffeurs and payments from one place.</p>
       </div>
       <form className="login-panel" onSubmit={submit} noValidate>
         <div className="row between">
-          <img src="/wordmark.png" alt="Supercarstars.com" className="login-wordmark" />
+          <img src="/wordmark.svg" alt="Superluxe Chauffeurs" className="login-wordmark" />
           <button type="button" className="icon-btn" onClick={toggle} aria-label="Toggle theme">{theme === 'dark' ? <FiSun size={18} /> : <FiMoon size={18} />}</button>
         </div>
         <div>

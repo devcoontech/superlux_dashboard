@@ -160,7 +160,7 @@ export default function AvailabilityCalendar({ vehicleId, onPickDay }: { vehicle
           extra={<>
             <SelectField label="Type" value={form.kind} onChange={(v) => setForm({ ...form, kind: v as 'blocked' | 'maintenance' })} options={[{ value: 'blocked', label: 'Unavailable' }, { value: 'maintenance', label: 'Maintenance' }]} />
             <TextField label="Reason (optional)" value={form.reason} onChange={(v) => setForm({ ...form, reason: v })} />
-          </>} message="The car will not be bookable at these times. Existing bookings in the way will stop this." />
+          </>} message="The vehicle will not be bookable at these times. Existing bookings in the way will stop this." />
       ) : null}
       {unblock ? (
         <ConfirmDialog title="Remove this block?" confirmLabel="Remove block" danger

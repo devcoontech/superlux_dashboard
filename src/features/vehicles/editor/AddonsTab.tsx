@@ -20,16 +20,16 @@ export function AddonsTab({ row, reload }: { row: Row; reload: () => void }) {
   const items = data?.items ?? [];
   const unit = (a: AddonOpt) => gbp(a.pricePence) + (a.pricingType === 'per_hour' ? '/h' : a.pricingType === 'per_unit' ? ' each' : '');
   return (
-    <Panel title="Available add-ons" hint="Customers booking this car only see the add-ons ticked here (and only while they are switched on)."
-      action={<button className="btn sm" onClick={() => go('addons')}>Manage add-ons</button>}>
-      {data && !items.length ? <Empty icon={FiStar} title="No add-ons yet">Create them under Add-ons first.</Empty> : null}
+    <Panel title="Available extras" hint="Customers booking this vehicle only see the extras ticked here (and only while they are switched on)."
+      action={<button className="btn sm" onClick={() => go('addons')}>Manage extras</button>}>
+      {data && !items.length ? <Empty icon={FiStar} title="No extras yet">Create them under Extras first.</Empty> : null}
       <div className="form-grid">
         {items.map((a) => a.allVehicles
-          ? <CheckField key={a.id} label={`${a.name} (${unit(a)}) · every car`} checked onChange={() => {}} hint={a.active ? 'Offered on every car; change this under Add-ons' : 'Switched off'} />
+          ? <CheckField key={a.id} label={`${a.name} (${unit(a)}) · every vehicle`} checked onChange={() => {}} hint={a.active ? 'Offered on every vehicle; change this under Extras' : 'Switched off'} />
           : <CheckField key={a.id} label={`${a.name} (${unit(a)})`} checked={sel.includes(a.id)} onChange={(c) => setSel((p) => (c ? [...p, a.id] : p.filter((x) => x !== a.id)))} hint={a.active ? undefined : 'Switched off: not shown to customers'} />)}
       </div>
       <div style={{ marginTop: 16 }}><ErrorBox error={error} /></div>
-      <div style={{ marginTop: 16 }}><button className="btn gold" disabled={busy} onClick={() => run(async () => { await api(`/vehicles/${row.id}/addons`, { method: 'PUT', body: { addonIds: sel } }); reload(); }, 'Add-ons saved')}>Save add-ons</button></div>
+      <div style={{ marginTop: 16 }}><button className="btn gold" disabled={busy} onClick={() => run(async () => { await api(`/vehicles/${row.id}/addons`, { method: 'PUT', body: { addonIds: sel } }); reload(); }, 'Extras saved')}>Save extras</button></div>
     </Panel>
   );
 }

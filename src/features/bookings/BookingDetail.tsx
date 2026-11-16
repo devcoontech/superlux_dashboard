@@ -12,6 +12,7 @@ import { go } from '../../lib/nav';
 import type { Detail, Dialog, Pt } from './bookingDetail.types';
 import { AddVehicle, StatusDialog, ChangeVehicle, AssignDriver } from './dialogs/ChangeDialogs';
 import { DeliveryCharge, Adjustment } from './dialogs/ChargeDialogs';
+import { ExtraChargeDialog } from './dialogs/ExtraChargeDialog';
 import { ManualPay, PaymentStatus, Refund } from './dialogs/PaymentDialogs';
 import { Extend, DecideExtension } from './dialogs/ExtensionDialogs';
 
@@ -47,7 +48,7 @@ function Progress({ status, withDriver }: { status: string; withDriver: boolean 
     { key: 'booked', label: 'Booked' },
     { key: 'paid', label: 'Paid' },
     { key: 'confirmed', label: 'Confirmed' },
-    ...(withDriver ? [{ key: 'driver', label: 'Driver assigned' }] : []),
+    ...(withDriver ? [{ key: 'driver', label: 'Chauffeur assigned' }] : []),
     { key: 'live', label: 'In progress' },
     { key: 'done', label: 'Completed' },
   ];
@@ -104,23 +105,23 @@ export default function BookingDetail({ id }: { id: string }) {
               <h2 className="bd-ref">{b.ref}</h2>
               <div className="row wrap" style={{ gap: 8 }}>
                 <Badge status={b.status} /><Badge status={b.paymentStatus} />
-                <span className="muted small">{b.source === 'admin' ? `Created by ${b.createdByName ?? 'staff'}` : 'Booked in the customer app'} · {fmtDateTime(b.createdAt)}</span>
+                <span className="muted small">{b.source === 'admin' ? `Created by ${b.createdByName ?? 'staff'}` : b.source === 'website' ? 'Booked on the website' : 'Booked in the customer app'} · {fmtDateTime(b.createdAt)}</span>
                 {b.holdExpiresAt && s === 'awaiting_payment' ? <span className="muted small">· car held until {fmtTime(b.holdExpiresAt)}</span> : null}
               </div>
             </div>
           </div>
           <div className="bd-actions">
             {['pending', 'awaiting_payment', 'confirmed', 'driver_assigned', 'in_progress'].includes(s) ? <button className="btn sm" onClick={() => setDialog({ t: 'extend' })}>Extend</button> : null}
-            {editable ? <button className="btn sm" onClick={() => setDialog({ t: 'vehicle' })}>Change car</button> : null}
+            {editable ? <button className="btn sm" onClick={() => setDialog({ t: 'vehicle' })}>Change vehicle</button> : null}
             {!closed ? <button className="btn sm" onClick={() => setDialog({ t: 'addVehicle' })}>Add vehicle</button> : null}
             {actions.map((a) => a.t === 'status' ? <button key={a.to + a.label} className={'btn sm ' + (a.danger ? 'danger' : a.to === 'confirmed' || a.to === 'awaiting_payment' || a.to === 'in_progress' || a.to === 'completed' ? 'gold' : '')} onClick={() => setDialog(a)}>{a.label}</button> : null)}
           </div>
         </div>
         {closed ? null : <Progress status={s} withDriver={b.driverOption === 'with_driver' || b.chauffeur} />}
         <div className="bd-facts">
-          <Fact icon={FiCalendar} label="When" value={fmtDate(b.startAt, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} sub={`${fmtTime(b.startAt)} to ${fmtTime(b.endAt)} · ${b.hours}h`} />
-          <Fact icon={FiTruck} label="Car" value={b.vehicle.name} sub={b.driver ? `Driver: ${b.driver.name}` : b.driverOption === 'with_driver' || b.chauffeur ? 'With driver, not assigned yet' : 'Self-drive'} />
-          <Fact icon={FiUser} label="Customer" value={b.customer.name} sub={b.customer.phone ?? b.customer.email} />
+          <Fact icon={FiCalendar} label={b.journey.leg === 'return' ? 'Return pick-up' : 'Pick-up'} value={fmtDate(b.startAt, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} sub={`${fmtTime(b.startAt)} · ${b.hours}h booked`} />
+          <Fact icon={FiTruck} label="Vehicle" value={b.vehicle.name} sub={b.driver ? `Chauffeur: ${b.driver.name}` : b.driverOption === 'with_driver' || b.chauffeur ? 'With chauffeur, not assigned yet' : 'Self-drive'} />
+          <Fact icon={FiUser} label="Lead passenger" value={b.journey.leadPassengerName || b.customer.name} sub={b.journey.leadPassengerPhone ?? b.customer.phone ?? b.customer.email} />
           <Fact icon={FiCreditCard} label={f.creditPence ? 'Overpaid' : 'Outstanding'} value={gbp(f.creditPence || f.balanceDuePence)} tone={f.creditPence ? 'var(--bad)' : f.balanceDuePence > 0 ? 'var(--gold)' : 'var(--good)'}
             sub={`${gbp(f.paidPence - f.refundedPence)} paid of ${gbp(f.finalTotalPence)}`} />
         </div>
@@ -144,31 +145,48 @@ export default function BookingDetail({ id }: { id: string }) {
             <div className="bd-fields">
               <Field label="Customer"><button className="link-btn" onClick={() => go('customers/' + b.customer.id)}>{b.customer.name}</button>
                 <div className="muted small"><a href={`mailto:${b.customer.email}`}>{b.customer.email}</a>{b.customer.phone ? <> · <a href={`tel:${b.customer.phone}`}>{b.customer.phone}</a></> : null}</div></Field>
-              <Field label="Car"><button className="link-btn" onClick={() => go('vehicles/' + b.vehicle.id)}>{b.vehicle.name}</button></Field>
-              <Field label="Date and time">{fmtDate(b.startAt, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}<div className="muted small">{fmtTime(b.startAt)} to {fmtTime(b.endAt)} · {b.hours} hour{b.hours === 1 ? '' : 's'}</div></Field>
-              <Field label="Event">{b.eventType?.title ?? '—'}{b.occasion ? <div className="muted small">{b.occasion}</div> : null}</Field>
-              <Field label="Driver">{b.driver
+              <Field label="Vehicle"><button className="link-btn" onClick={() => go('vehicles/' + b.vehicle.id)}>{b.vehicle.name}</button></Field>
+              <Field label="Pick-up">{fmtDate(b.startAt, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}<div className="muted small">{fmtTime(b.startAt)} · {b.hours} hour{b.hours === 1 ? '' : 's'} booked (until about {fmtTime(b.endAt)})</div></Field>
+              <Field label="Service">{b.eventType?.title ?? '—'}{b.journey.journeyType ? <div className="muted small">{b.journey.journeyType === 'return' ? `Return journey · ${b.journey.leg === 'return' ? 'return leg' : 'outbound leg'}` : 'One way'}</div> : null}{b.occasion ? <div className="muted small">{b.occasion}</div> : null}</Field>
+              <Field label="Chauffeur">{b.driver
                 ? <>{b.driver.name}{b.driverAssignments.length > 1 ? <div className="muted small">Previously: {b.driverAssignments.filter((a) => !a.active).map((a) => a.driverName).join(', ')}</div> : null}</>
                 : <span className={b.driverOption === 'with_driver' || b.chauffeur ? '' : 'muted'}>{b.driverOption === 'with_driver' || b.chauffeur ? 'Needed, not assigned yet' : 'Self-drive'}</span>}
                 {['confirmed', 'driver_assigned'].includes(s) && (b.driverOption === 'with_driver' || b.chauffeur || b.driver) ? (
                   <div className="row wrap" style={{ gap: 8, marginTop: 8 }}>
-                    <button className="btn sm" onClick={() => setDialog({ t: 'driver' })}>{b.driver ? 'Change driver' : 'Assign driver'}</button>
+                    <button className="btn sm" onClick={() => setDialog({ t: 'driver' })}>{b.driver ? 'Change chauffeur' : 'Assign chauffeur'}</button>
                     {b.driver ? <button className="btn sm danger" onClick={() => setDialog({ t: 'removeDriver' })}>Remove</button> : null}
                   </div>
                 ) : null}</Field>
               <Field label="Progress"><Badge status={b.dispatchStatus} />
                 {active && nextDispatch ? <div style={{ marginTop: 8 }}><button className="btn sm gold" disabled={busy} onClick={() => run(async () => { await api(`/bookings/${id}/dispatch`, { body: { status: nextDispatch } }); reload(); }, 'Progress updated')}>Mark: {humanize(nextDispatch)}</button></div> : null}</Field>
-              <Field label={b.pickupAddress ? 'Journey' : b.experience === 'delivered' ? 'Delivery' : 'Collection'} wide>{b.pickupAddress
-                ? <><div>From {b.pickupAddress} <MapLink p={b.points.pickup} /></div><div>To {b.dropoffAddress} <MapLink p={b.points.dropoff} /></div><div className="muted small">{b.routeMiles} miles by road</div></>
+              <Field label={b.pickupAddress ? 'Route' : b.experience === 'delivered' ? 'Delivery' : 'Pick-up'} wide>{b.pickupAddress
+                ? <><div>From {b.pickupAddress} <MapLink p={b.points.pickup} /></div>
+                    {b.journey.pickupDetails ? <div className="small" style={{ color: 'var(--gold-deep, #b58b00)' }}>Pick-up details: {b.journey.pickupDetails}</div> : null}
+                    {b.dropoffAddress ? <div>To {b.dropoffAddress} <MapLink p={b.points.dropoff} /></div> : <div className="muted small">Hourly hire: as directed by the passenger</div>}
+                    {b.journey.dropoffDetails ? <div className="small" style={{ color: 'var(--gold-deep, #b58b00)' }}>Drop-off details: {b.journey.dropoffDetails}</div> : null}
+                    {b.journey.stops ? <div>Stops: {b.journey.stops}</div> : null}
+                    {b.dropoffAddress ? <div className="muted small">{b.routeMiles != null ? `${b.routeMiles} miles by road${b.journey.driveMinutes ? `, about ${Math.round(b.journey.driveMinutes)} minutes` : ''}` : 'Route not measured: confirm the mileage and add any charge below'}</div> : null}</>
                 : b.experience === 'delivered'
-                  ? <>{b.address} <MapLink p={b.points.address} />{b.deliveryMiles != null ? <div className="muted small">{b.deliveryMiles} miles from the car's base</div> : null}</>
-                  : 'Collect from the showroom'}</Field>
-              {b.customerNotes ? <Field label="Customer notes" wide><div className="pre">{b.customerNotes}</div></Field> : null}
+                  ? <>{b.address} <MapLink p={b.points.address} />{b.deliveryMiles != null ? <div className="muted small">{b.deliveryMiles} miles from the vehicle's base</div> : null}</>
+                  : 'No pick-up address given'}</Field>
+              {b.journey.flightNumber ? <Field label="Flight">{b.journey.flightNumber}{b.journey.terminal ? <div className="muted small">{b.journey.terminal}</div> : null}</Field> : null}
+              {b.journey.passengers != null ? <Field label="Passengers and luggage">{b.journey.passengers} passenger{b.journey.passengers === 1 ? '' : 's'}
+                <div className="muted small">{b.journey.luggageLarge ?? 0} large, {b.journey.luggageSmall ?? 0} small bags{b.journey.childSeats ? ` · ${b.journey.childSeats} child seat${b.journey.childSeats === 1 ? '' : 's'}` : ''}</div></Field> : null}
+              {b.journey.leadPassengerName && b.journey.leadPassengerName !== b.customer.name ? <Field label="Lead passenger">{b.journey.leadPassengerName}{b.journey.leadPassengerPhone ? <div className="muted small"><a href={`tel:${b.journey.leadPassengerPhone}`}>{b.journey.leadPassengerPhone}</a></div> : null}</Field> : null}
+              {b.journey.company || b.journey.onBehalf ? <Field label="Booked for">{b.journey.company ?? '—'}{b.journey.onBehalf ? <div className="muted small">Booked on behalf of another passenger</div> : null}</Field> : null}
+              {b.journey.paymentPreference ? <Field label="Payment preference">{humanize(b.journey.paymentPreference)}{b.journey.paymentMethodPreference ? <div className="muted small">{humanize(b.journey.paymentMethodPreference)}</div> : null}</Field> : null}
+              {b.journey.specialRequests ? <Field label="Special requests" wide><div className="pre">{b.journey.specialRequests}</div></Field> : null}
+              {b.customerNotes ? <Field label="Notes for the chauffeur" wide><div className="pre">{b.customerNotes}</div></Field> : null}
+              {b.termsAcceptances?.length ? <Field label="Terms & Conditions" wide>{b.termsAcceptances.map((a, i) => (
+                <div key={i}><Badge status="confirmed" label={`Version ${a.version} accepted`} /> <span className="muted small">{fmtDateTime(a.acceptedAt)}{a.ip ? ` · from ${a.ip}` : ''}</span>
+                  <div className="muted small" style={{ marginTop: 4 }}>“{a.statement}”</div></div>
+              ))}</Field> : b.source === 'website' ? <Field label="Terms & Conditions" wide><span className="muted small">No acceptance recorded (booked before acceptance was required)</span></Field> : null}
               {b.consents ? <Field label="Consents" wide><span className="row wrap" style={{ gap: 6 }}>
-                <Badge status={b.consents.terms ? 'confirmed' : 'inactive'} label={`Terms ${b.consents.terms ? 'accepted' : 'not accepted'}`} />
-                <Badge status={b.consents.guardian ? 'confirmed' : 'draft'} label={`Guardian present: ${b.consents.guardian ? 'yes' : 'no'}`} />
-                <Badge status={b.consents.marketingPhotos ? 'confirmed' : 'draft'} label={`Photo marketing: ${b.consents.marketingPhotos ? 'yes' : 'no'}`} />
+                <Badge status={b.consents.terms ? 'confirmed' : 'inactive'} label={b.source === 'website' ? 'Data processing consent given' : `Terms ${b.consents.terms ? 'accepted' : 'not accepted'}`} />
+                {b.consents.guardian != null ? <Badge status={b.consents.guardian ? 'confirmed' : 'draft'} label={`Guardian present: ${b.consents.guardian ? 'yes' : 'no'}`} /> : null}
+                {b.consents.marketingPhotos != null ? <Badge status={b.consents.marketingPhotos ? 'confirmed' : 'draft'} label={`Photo marketing: ${b.consents.marketingPhotos ? 'yes' : 'no'}`} /> : null}
               </span></Field> : null}
+
             </div>
           </Panel>
 
@@ -257,14 +275,14 @@ export default function BookingDetail({ id }: { id: string }) {
               </> : null}
               {b.order.serviceFeePence ? <Money label="Service fee" value={gbp(b.order.serviceFeePence)} /> : null}
               <Money label="Quoted price" value={gbp(f.quotedTotalPence)} />
-              {liveCharges.map((c) => <Money key={c.id} label={`${c.description}${c.approvedBy ? ` · approved by ${c.approvedBy}` : ''}`} value={gbp(c.amountPence)} />)}
+              {liveCharges.map((c) => <Money key={c.id} label={`${c.description}${c.details ? ` (${c.details.split('\n')[0]})` : ''}${c.approvedBy ? ` · added by ${c.approvedBy}` : ''}`} value={gbp(c.amountPence)} />)}
               {f.finalTotalPence - f.quotedTotalPence - f.confirmedChargesPence ? <Money label="Charges on the other vehicles" value={gbp(f.finalTotalPence - f.quotedTotalPence - f.confirmedChargesPence)} /> : null}
               {delivery?.status === 'pending' ? <Money label="Delivery (estimate, not charged yet)" value={delivery.amountPence ? gbp(delivery.amountPence) : 'To confirm'} tone="var(--text-dim)" /> : null}
               <Money label={b.order.items.length > 1 ? 'Order total' : 'Booking total'} value={gbp(f.finalTotalPence)} strong />
             </dl>
             {b.addons.length ? (
               <div style={{ marginTop: 16 }}>
-                <div className="strong small" style={{ marginBottom: 6 }}>Add-ons (price agreed at booking)</div>
+                <div className="strong small" style={{ marginBottom: 6 }}>Extras (price agreed at booking)</div>
                 <div className="list">{b.addons.map((a) => (
                   <div className="list-item" key={a.id}><div style={{ flex: 1 }}>{a.name}<div className="muted small">{gbp(a.unitPricePence)}{a.pricingType === 'per_hour' ? `/h × ${a.hours}h` : ''}{a.quantity > 1 ? ` × ${a.quantity}` : ''}</div></div><div>{gbp(a.totalPence)}</div></div>
                 ))}</div>
@@ -280,7 +298,9 @@ export default function BookingDetail({ id }: { id: string }) {
             <div className="bd-paidbar" aria-hidden="true"><span style={{ width: `${f.finalTotalPence ? Math.min(100, Math.round(((f.paidPence - f.refundedPence) / f.finalTotalPence) * 100)) : 0}%` }} /></div>
             {!closed ? <div className="row wrap" style={{ gap: 8, marginTop: 14 }}>
               {f.balanceDuePence > 0 ? <button className="btn sm gold" onClick={() => setDialog({ t: 'manualPay' })}>Record cash or card payment</button> : null}
-              <button className="btn sm" onClick={() => setDialog({ t: 'adjust' })}>Add charge or credit</button>
+              <button className="btn sm" onClick={() => setDialog({ t: 'extra' })}>Add charge (waiting, mileage, cleaning…)</button>
+              <button className="btn sm" onClick={() => setDialog({ t: 'adjust' })}>Other charge or credit</button>
+              {f.balanceDuePence > 0 && !['pending', 'awaiting_payment'].includes(b.status) ? <button className="btn sm" onClick={() => setDialog({ t: 'payRequest' })}>Email payment link</button> : null}
             </div> : null}
           </Panel>
 
@@ -291,8 +311,8 @@ export default function BookingDetail({ id }: { id: string }) {
                 return (
                   <div className="list-item" key={p.id} style={{ alignItems: 'flex-start' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="strong">{gbp(p.amountPence)} <Badge status={p.status} label={p.status === 'succeeded' ? 'Received' : undefined} /> {p.source === 'stripe' ? <Badge status={p.verified ? 'succeeded' : 'pending'} label={p.verified ? 'Verified online' : 'Online, not verified'} /> : <Badge status="draft" label="Recorded by staff" />}</div>
-                      <div className="muted small">{p.source === 'manual' ? `${METHOD[p.method] ?? humanize(p.method)}${p.manualReference ? ` · ref ${p.manualReference}` : ''} · recorded by ${p.recordedBy ?? 'staff'}` : `Card online · ${p.providerRef}`} · {humanize(p.purpose)}</div>
+                      <div className="strong">{gbp(p.amountPence)} <Badge status={p.status} label={p.status === 'succeeded' ? 'Received' : undefined} /> {p.source !== 'manual' ? <Badge status={p.verified ? 'succeeded' : 'pending'} label={p.verified ? 'Verified online' : 'Online, not verified'} /> : <Badge status="draft" label="Recorded by staff" />}</div>
+                      <div className="muted small">{p.source === 'manual' ? `${METHOD[p.method] ?? humanize(p.method)}${p.manualReference ? ` · ref ${p.manualReference}` : ''} · recorded by ${p.recordedBy ?? 'staff'}` : `${p.method === 'klarna' ? 'Klarna via Stripe' : p.method === 'paypal' ? 'PayPal' : 'Card online'} · ${p.providerRef}`} · {humanize(p.purpose)}</div>
                       <div className="muted small">{p.paidAt ? `Paid ${fmtDateTime(p.paidAt)}` : `Created ${fmtDateTime(p.createdAt)}`}{p.statusChangedBy ? ` · updated by ${p.statusChangedBy}` : ''}{refunded ? ` · refunded ${gbp(refunded)}` : ''}</div>
                       {p.note ? <div className="small pre" style={{ marginTop: 4 }}>Note: {p.note}</div> : null}
                     </div>
@@ -313,12 +333,16 @@ export default function BookingDetail({ id }: { id: string }) {
       {dialog?.t === 'status' ? <StatusDialog d={dialog} bookingId={id} onClose={() => setDialog(null)} onDone={reload} unpaid={unpaid} /> : null}
       {dialog?.t === 'vehicle' ? <ChangeVehicle b={b} onClose={() => setDialog(null)} onDone={reload} /> : null}
       {dialog?.t === 'driver' ? <AssignDriver b={b} onClose={() => setDialog(null)} onDone={reload} /> : null}
-      {dialog?.t === 'removeDriver' ? <ConfirmDialog title="Remove the driver?" requireReason confirmLabel="Remove" danger onClose={() => setDialog(null)}
+      {dialog?.t === 'removeDriver' ? <ConfirmDialog title="Remove the chauffeur?" requireReason confirmLabel="Remove" danger onClose={() => setDialog(null)}
         onConfirm={async (reason) => { await api(`/bookings/${id}/driver`, { method: 'DELETE', body: { reason } }); reload(); }} /> : null}
       {dialog?.t === 'manualPay' ? <ManualPay b={b} outstanding={f.balanceDuePence} onClose={() => setDialog(null)} onDone={reload} /> : null}
       {dialog?.t === 'refund' ? <Refund paymentId={dialog.paymentId} max={dialog.max} suggested={['cancelled', 'cancellation_requested'].includes(s) ? b.cancellationPolicy.refundPence : f.creditPence || null} onClose={() => setDialog(null)} onDone={reload} /> : null}
       {dialog?.t === 'delivery' ? <DeliveryCharge b={b} current={delivery ?? null} onClose={() => setDialog(null)} onDone={reload} /> : null}
       {dialog?.t === 'adjust' ? <Adjustment b={b} onClose={() => setDialog(null)} onDone={reload} /> : null}
+      {dialog?.t === 'extra' ? <ExtraChargeDialog b={b} onClose={() => setDialog(null)} onDone={reload} /> : null}
+      {dialog?.t === 'payRequest' ? <ConfirmDialog title="Email a payment link?" confirmLabel="Send email" onClose={() => setDialog(null)}
+        message={`The customer is emailed that ${gbp(f.balanceDuePence)} is outstanding, with a link to pay online (card, Klarna or PayPal where switched on).`}
+        onConfirm={async () => { await api(`/bookings/${b.id}/payment-request`, { method: 'POST', body: {} }); reload(); }} /> : null}
       {dialog?.t === 'voidCharge' ? <ConfirmDialog title="Remove this charge?" danger requireReason confirmLabel="Remove charge" onClose={() => setDialog(null)}
         message={`${dialog.charge.description}: ${gbp(dialog.charge.amountPence)}. It is taken off the booking total and a credit note is issued.`}
         onConfirm={async (reason) => { await api(`/bookings/${id}/charges/${dialog.charge.id}/void`, { body: { reason } }); reload(); }} /> : null}

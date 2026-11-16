@@ -213,7 +213,7 @@ td .car-line:hover { color: var(--gold); }
 
 .car-thumb {
   width: 58px; height: 42px; border-radius: 10px; flex: none; overflow: hidden;
-  background: #000 url('/logo.png') center / 120% no-repeat; border: 1px solid var(--line);
+  background: #000 url('/logo.svg') center / 120% no-repeat; border: 1px solid var(--line);
 }
 .car-thumb.lg { width: 100%; height: 150px; border-radius: 16px; background-size: 72%; }
 

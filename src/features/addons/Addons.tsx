@@ -32,20 +32,20 @@ export default function Addons() {
   const { run, error: actError } = useAction();
   const cars = (fleet?.items ?? []).map((v) => ({ id: v.id, name: `${v.make} ${v.model}` }));
   return (
-    <Panel title="Add-ons" hint="Optional services customers can choose when booking. Choose which cars offer each one here or on the car's page."
-      action={<button className="btn gold sm" onClick={() => setEditing('new')}><FiPlus /> New add-on</button>}>
+    <Panel title="Add-ons" hint="Optional services customers can choose when booking. Choose which vehicles offer each one here or on the vehicle's page."
+      action={<button className="btn gold sm" onClick={() => setEditing('new')}><FiPlus /> New extra</button>}>
       <ErrorBox error={error} retry={reload} /><ErrorBox error={actError} />
       {loading && !data ? <Loading /> : null}
-      {data && !data.items.length ? <Empty icon={FiPackage} title="No add-ons yet">Create photographers, decorations, equipment or any other service.</Empty> : null}
+      {data && !data.items.length ? <Empty icon={FiPackage} title="No extras yet">Create photographers, decorations, equipment or any other service.</Empty> : null}
       {data?.items.length ? (
         <div className="table-wrap"><table>
-          <thead><tr><th>Add-on</th><th className="num">Price</th><th>Offered on</th><th>Status</th><th className="actions-cell" /></tr></thead>
+          <thead><tr><th>Extra</th><th className="num">Price</th><th>Offered on</th><th>Status</th><th className="actions-cell" /></tr></thead>
           <tbody>{data.items.map((a) => (
             <tr key={a.id}>
               <td><div className="row">{a.imageUrl ? <img src={a.imageUrl} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover' }} /> : null}
                 <div><div className="cell-title">{a.name}</div><div className="cell-sub">{a.detail}{a.maxQuantity > 1 ? ` · up to ${a.maxQuantity}` : ''}{a.timesBooked ? ` · booked ${a.timesBooked}×` : ''}</div></div></div></td>
               <td className="num">{priceLabel(a)}</td>
-              <td>{a.allVehicles ? 'Every car' : a.vehicleIds.length ? `${a.vehicleIds.length} car${a.vehicleIds.length === 1 ? '' : 's'}` : <span className="muted">No cars yet</span>}</td>
+              <td>{a.allVehicles ? 'Every vehicle' : a.vehicleIds.length ? `${a.vehicleIds.length} vehicle${a.vehicleIds.length === 1 ? '' : 's'}` : <span className="muted">No vehicles yet</span>}</td>
               <td><Switch text label={`${a.name} active`} checked={a.active} onChange={(v) => run(async () => { await api(`/addons/${a.id}`, { method: 'PATCH', body: { active: v } }); reload(); })} /></td>
               <td className="actions-cell"><RowActions name={a.name} onEdit={() => setEditing(a)} onDelete={() => setDeleting(a)} /></td>
             </tr>
@@ -53,7 +53,7 @@ export default function Addons() {
         </table></div>
       ) : null}
       {editing ? <AddonForm addon={editing === 'new' ? null : editing} cars={cars} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} /> : null}
-      {deleting ? <DeleteDialog what={`"${deleting.name}"`} path={`/addons/${deleting.id}`} note="It is removed from every car. Bookings that already include it keep their price and wording. To hide it for now, switch it off instead." onClose={() => setDeleting(null)} onDone={reload} /> : null}
+      {deleting ? <DeleteDialog what={`"${deleting.name}"`} path={`/addons/${deleting.id}`} note="It is removed from every vehicle. Bookings that already include it keep their price and wording. To hide it for now, switch it off instead." onClose={() => setDeleting(null)} onDone={reload} /> : null}
     </Panel>
   );
 }
@@ -80,11 +80,11 @@ function AddonForm({ addon, cars, onClose, onSaved }: { addon: Addon | null; car
       name: name.trim(), detail: detail.trim() || null, pricePence: price, active, pricingType, maxQuantity: pricingType === 'per_unit' ? maxQuantity ?? 1 : 1,
       allVehicles, vehicleIds: allVehicles ? [] : vehicleIds, imageUrl: imageUrl || null,
     };
-    const ok = await run(() => api(addon ? `/addons/${addon.id}` : '/addons', { method: addon ? 'PATCH' : 'POST', body }), 'Add-on saved');
+    const ok = await run(() => api(addon ? `/addons/${addon.id}` : '/addons', { method: addon ? 'PATCH' : 'POST', body }), 'Extra saved');
     if (ok) onSaved();
   };
   return (
-    <Drawer title={addon ? 'Edit add-on' : 'New add-on'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy || !name.trim() || price == null} onClick={save}>{busy ? 'Saving…' : 'Save'}</button></>}>
+    <Drawer title={addon ? 'Edit extra' : 'New extra'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy || !name.trim() || price == null} onClick={save}>{busy ? 'Saving…' : 'Save'}</button></>}>
       <TextField label="Name *" value={name} onChange={setName} error={fieldErrors['name']} placeholder="e.g. Professional photographer" />
       <TextField label="Description" value={detail} onChange={setDetail} multiline />
       <div className="field">
@@ -102,11 +102,11 @@ function AddonForm({ addon, cars, onClose, onSaved }: { addon: Addon | null; car
         {pricingType === 'per_unit' ? <NumberField label="Most a customer can add" value={maxQuantity} onChange={setMaxQuantity} min={1} max={100} /> : null}
       </div>
       <ToggleField label="Available to customers" checked={active} onChange={setActive} />
-      <ToggleField label="Offer on every car" checked={allVehicles} onChange={setAllVehicles} onText="Yes" offText="No" hint="Off: choose the cars below" />
+      <ToggleField label="Offer on every vehicle" checked={allVehicles} onChange={setAllVehicles} onText="Yes" offText="No" hint="Off: choose the vehicles below" />
       {!allVehicles ? (
         <div className="field">
-          <label>Applicable cars</label>
-          {!cars.length ? <span className="muted small">Add cars under Fleet first.</span> : null}
+          <label>Applicable vehicles</label>
+          {!cars.length ? <span className="muted small">Add vehicles under Fleet first.</span> : null}
           <div className="form-grid">{cars.map((c) => <CheckField key={c.id} label={c.name} checked={vehicleIds.includes(c.id)} onChange={(on) => setVehicleIds((p) => (on ? [...p, c.id] : p.filter((x) => x !== c.id)))} />)}</div>
         </div>
       ) : null}

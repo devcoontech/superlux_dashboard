@@ -13,7 +13,7 @@ export function Field({ label, error, hint, children, htmlFor }: { label: string
   );
 }
 
-type InputProps = { label: string; error?: string; hint?: string; disabled?: boolean; placeholder?: string };
+type InputProps = { label: string; error?: string; hint?: string; disabled?: boolean; placeholder?: string; list?: string };
 
 export function TextField({ label, value, onChange, error, hint, type = 'text', multiline, min, max, ...rest }: InputProps & { value: string; onChange: (v: string) => void; type?: string; multiline?: boolean; min?: string; max?: string }) {
   const id = useId();

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 96" role="img" aria-label="Superluxe Chauffeurs London">
+  <rect width="300" height="96" rx="14" fill="#0b0b0c"/>
+  <text x="18" y="52" fill="#fff" font-family="Didot, 'Bodoni 72', 'Bodoni MT', 'Playfair Display', Georgia, serif" font-size="45" font-weight="800" letter-spacing="-0.5" textLength="264" lengthAdjust="spacingAndGlyphs">SUPER<tspan font-style="italic" font-weight="500">LUXE</tspan></text>
+  <text x="20" y="78" fill="#c4c4c4" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" textLength="260" lengthAdjust="spacing">CHAUFFEURS LONDON</text>
+</svg>

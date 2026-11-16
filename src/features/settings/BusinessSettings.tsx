@@ -95,7 +95,7 @@ export function Business({ s, onSaved }: { s: S; onSaved: () => void }) {
           </div>
           <ErrorBox error={logoAction.error} />
           <div className="form-grid">
-            <div className="full"><TextField label="Business name *" value={str('company.name')} onChange={text('company.name')} error={err('company.name')} placeholder="e.g. Supercarstars Ltd" /></div>
+            <div className="full"><TextField label="Business name *" value={str('company.name')} onChange={text('company.name')} error={err('company.name')} placeholder="e.g. Superluxe Chauffeurs Ltd" /></div>
           </div>
         </Card>
 

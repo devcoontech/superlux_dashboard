@@ -83,7 +83,7 @@ export function LicencePhotos({ driverId, pending, setPending, removed, setRemov
         const showStored = stored && !pending[side] && !removed.includes(side);
         return (
           <div key={side} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <span className="muted small">{label}{pending[side] ? ' · new photo, saved with the driver' : removed.includes(side) ? ' · will be removed' : ''}</span>
+            <span className="muted small">{label}{pending[side] ? ' · new photo, saved with the chauffeur' : removed.includes(side) ? ' · will be removed' : ''}</span>
             {pending[side] ? <LicenceThumb src={previews[side] ?? null} label={label} /> : showStored ? <StoredLicence driverId={driverId!} image={stored} label={`${label} of licence`} /> : <LicenceThumb src={null} label={label} />}
             <div className="row">
               <button type="button" className="btn sm" onClick={() => inputs[side].current?.click()}><FiUploadCloud /> {showStored || pending[side] ? 'Replace' : 'Upload'}</button>

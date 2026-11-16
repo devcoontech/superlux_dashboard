@@ -11,7 +11,7 @@ export function History({ id }: { id: string }) {
     <Panel title="Booking history">
       <ErrorBox error={error} />
       {loading && !data ? <Loading /> : null}
-      {data && !data.items.length ? <Empty icon={FiStar} title="No bookings for this car yet" /> : null}
+      {data && !data.items.length ? <Empty icon={FiStar} title="No bookings for this vehicle yet" /> : null}
       {data?.items.length ? (
         <div className="table-wrap"><table>
           <thead><tr><th>Reference</th><th>When</th><th>Customer</th><th>Status</th><th className="num">Total</th></tr></thead>

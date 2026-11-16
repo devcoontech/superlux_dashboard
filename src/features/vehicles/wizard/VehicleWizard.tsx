@@ -7,8 +7,8 @@ import { ErrorBox } from '../../../components/feedback';
 import { Badge, Empty, Panel } from '../../../components/ui';
 import { gbp } from '../../../lib/format';
 import { go } from '../../../lib/nav';
-import { blankVehicle, vehicleBody, vehicleErrors, type VehicleForm } from '../vehicleForm';
-import { AvailabilityFields, BasicsFields, PricingFields } from '../VehicleFields';
+import { AVAILABILITY_MODES, blankVehicle, vehicleBody, vehicleErrors, type VehicleForm } from '../vehicleForm';
+import { AvailabilityFields, BasicsFields, PricingFields, SpecsFields } from '../VehicleFields';
 import { describePrice, PriceForm, PriceTable, priceTypeLabel, type PriceBody } from '../editor/Prices';
 
 /**
@@ -18,10 +18,10 @@ import { describePrice, PriceForm, PriceTable, priceTypeLabel, type PriceBody } 
  */
 
 const STEPS = [
-  { title: 'Basic information', desc: 'Brand, model and year' },
-  { title: 'Pricing', desc: 'What the car costs to book' },
-  { title: 'Images', desc: 'Photos for the listing' },
-  { title: 'Availability', desc: 'Status, location and events' },
+  { title: 'Basic information', desc: 'Brand, model, category and capacity' },
+  { title: 'Pricing', desc: 'Hourly rate and booking length' },
+  { title: 'Images', desc: 'Photos for the website' },
+  { title: 'Availability', desc: 'Status, location and services' },
   { title: 'Review and publish', desc: 'Check everything' },
 ];
 
@@ -47,11 +47,18 @@ export default function VehicleWizard() {
   const [prices, setPrices] = useState<Draft[]>([]);
   const [editingPrice, setEditingPrice] = useState<Draft | 'new' | null>(null);
   const [eventIds, setEventIds] = useState<string[]>([]);
+  const offeredForAll = useRef(false);
   const [addonIds, setAddonIds] = useState<string[]>([]);
   const { data: ev } = useApi<{ items: Event[] }>('/event-types');
   const { data: ad } = useApi<{ items: Addon[] }>('/addons');
   const events = (ev?.items ?? []).filter((e) => !e.archived_at);
   const eventOpts = events.map((e) => ({ id: e.id, name: e.title }));
+  // A new vehicle is offered for every service to start with; untick any it should not be offered for.
+  useEffect(() => {
+    if (offeredForAll.current || !ev) return;
+    offeredForAll.current = true;
+    setEventIds((ev.items ?? []).filter((e) => !e.archived_at).map((e) => e.id));
+  }, [ev]);
   const { run, busy, error, fieldErrors } = useAction();
   // What has been saved so far, so a retry continues instead of starting again.
   const saved = useRef<{ id: string | null; prices: Set<string>; pics: Set<string> }>({ id: null, prices: new Set(), pics: new Set() });
@@ -63,17 +70,17 @@ export default function VehicleWizard() {
   useEffect(() => () => picsRef.current.forEach((p) => URL.revokeObjectURL(p.url)), []);
 
   const errs = vehicleErrors(f);
-  const stepErrors = [errs.basics, errs.pricing, {}, errs.availability, {}];
+  const stepErrors = [{ ...errs.basics, ...errs.specs }, errs.pricing, {}, errs.availability, {}];
   const shown = (i: number) => ({ ...fieldErrors, ...(tried[i] ? stepErrors[i] : {}) });
   const main = pics.find((p) => p.key === mainKey) ?? pics[0];
   const distanceEvents = events.filter((e) => eventIds.includes(e.id) && e.pricing_basis === 'distance');
   const warnings = [
-    !pics.length ? 'No images yet: the car can be saved as a draft, but it needs a main image to be published.' : null,
-    f.operationalStatus !== 'active' ? 'The car is not Active, so it will be saved as a draft.' : null,
-    !eventIds.length ? 'No events chosen: customers will not see this car until you add events.' : null,
+    !pics.length ? 'No images yet: the vehicle can be saved as a draft, but it needs a main image to be published.' : null,
+    f.operationalStatus !== 'active' ? 'The vehicle is not Active, so it will be saved as a draft.' : null,
+    !eventIds.length ? 'No services chosen: customers cannot book this vehicle until you add services.' : null,
     distanceEvents.length && !prices.some((p) => p.kind === 'per_mile' && p.active && (!p.eventTypeId || distanceEvents.some((e) => e.id === p.eventTypeId)))
       ? `${distanceEvents.map((e) => e.title).join(', ')} is priced by distance: add a Per mile price on the Pricing step.` : null,
-    distanceEvents.length && !f.chauffeurAvailable ? `${distanceEvents.map((e) => e.title).join(', ')} needs the car to be offered with a driver.` : null,
+    distanceEvents.length && !f.chauffeurAvailable ? `${distanceEvents.map((e) => e.title).join(', ')} needs the vehicle to be offered with a chauffeur.` : null,
   ].filter((w): w is string => !!w);
   const canPublish = !!pics.length && f.operationalStatus === 'active';
 
@@ -145,7 +152,7 @@ export default function VehicleWizard() {
 
   const savePrice = (b: PriceBody) => {
     const editing = editingPrice && editingPrice !== 'new' ? editingPrice : null;
-    if (editing && saved.current.prices.has(editing.key)) throw new Error('This price is already saved to the car. Change it on the car\'s Pricing tab after finishing.');
+    if (editing && saved.current.prices.has(editing.key)) throw new Error('This price is already saved to the vehicle. Change it on the vehicle\'s Pricing tab after finishing.');
     setPrices((list) => (editing ? list.map((p) => (p.key === editing.key ? { ...b, key: p.key } : p)) : [...list, { ...b, key: nextKey() }]));
   };
 
@@ -168,13 +175,18 @@ export default function VehicleWizard() {
 
       <div className="vw-body" key={step}>
         <h3 className="vw-title">{STEPS[step].title}</h3>
-        {step === 0 ? <BasicsFields f={f} set={set} err={shown(0)} /> : null}
+        {step === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <BasicsFields f={f} set={set} err={shown(0)} />
+            <div className="vw-group"><div className="strong">Capacity and features</div><SpecsFields f={f} set={set} err={shown(0)} /></div>
+          </div>
+        ) : null}
         {step === 1 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <PricingFields f={f} set={set} err={shown(1)} />
             <div className="vw-group">
               <div className="row between wrap">
-                <div><div className="strong">Other price types (optional)</div><div className="muted small">Packages such as a full day, a different rate for one event, extra hours, per-mile trips or special dates.</div></div>
+                <div><div className="strong">Other price types (optional)</div><div className="muted small">Packages such as a half-day hire, a different rate for one service, extra hours or special dates such as New Year&apos;s Eve.</div></div>
                 <button className="btn sm" onClick={() => setEditingPrice('new')}><FiPlus /> Add a price</button>
               </div>
               <PriceTable items={prices} events={eventOpts} onEdit={(p) => setEditingPrice(p)} onDelete={(p) => setPrices((l) => l.filter((x) => x.key !== p.key))} />
@@ -188,14 +200,14 @@ export default function VehicleWizard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <AvailabilityFields f={f} set={set} err={shown(3)} />
             <div className="vw-group">
-              <div className="strong">Events this car is offered for</div>
-              {!events.length ? <span className="muted small">No events yet. Add them under Events.</span> : (
+              <div className="strong">Services this vehicle is offered for</div>
+              {!events.length ? <span className="muted small">No services yet. Add them under Services.</span> : (
                 <div className="form-grid">{events.map((e) => <CheckField key={e.id} label={e.title} hint={e.pricing_basis === 'distance' ? 'Priced per mile' : undefined} checked={eventIds.includes(e.id)} onChange={(c) => setEventIds((p) => (c ? [...p, e.id] : p.filter((x) => x !== e.id)))} />)}</div>
               )}
             </div>
             {ad?.items.some((a) => !a.allVehicles) ? (
               <div className="vw-group">
-                <div className="strong">Add-ons customers can choose</div>
+                <div className="strong">Extras customers can choose</div>
                 <div className="form-grid">{ad.items.filter((a) => !a.allVehicles).map((a) => <CheckField key={a.id} label={`${a.name} (${gbp(a.pricePence)}${a.pricingType === 'per_hour' ? '/h' : ''})`} hint={a.active ? undefined : 'Switched off'} checked={addonIds.includes(a.id)} onChange={(c) => setAddonIds((p) => (c ? [...p, a.id] : p.filter((x) => x !== a.id)))} />)}</div>
               </div>
             ) : null}
@@ -207,7 +219,7 @@ export default function VehicleWizard() {
         ) : null}
       </div>
 
-      {savedId ? <div className="note">The car has been created. Finishing again carries on from where it stopped; it will not be added twice.</div> : null}
+      {savedId ? <div className="note">The vehicle has been created. Finishing again carries on from where it stopped; it will not be added twice.</div> : null}
       <ErrorBox error={error} />
       {Object.keys(stepErrors[step]).length && tried[step] ? <div className="field-error">Fix the highlighted fields to continue.</div> : null}
 
@@ -269,17 +281,18 @@ function Review({ f, pics, main, prices, events, addons, eventOpts, warnings, on
       {children}
     </section>
   );
-  const eName = (id: string | null) => (id ? eventOpts.find((e) => e.id === id)?.name ?? 'One event' : 'Every event');
+  const eName = (id: string | null) => (id ? eventOpts.find((e) => e.id === id)?.name ?? 'One service' : 'Every service');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {warnings.map((w) => <div key={w} className="note row" style={{ gap: 10 }}><FiAlertTriangle style={{ flex: 'none' }} /> {w}</div>)}
       <div className="vw-review-grid">
         <Section i={0}><dl className="kv">
           <Item k="Vehicle" v={`${f.make} ${f.model}`} /><Item k="Year" v={f.year} /><Item k="Category" v={f.category} />
+          <Item k="Capacity" v={`${f.seats} passengers · ${f.luggageLarge} large, ${f.luggageSmall} small bags`} />
           <Item k="Registration" v={f.fleetRef} /><Item k="Colour" v={f.colour} /><Item k="Description" v={f.description ? <span className="pre">{f.description}</span> : null} />
         </dl></Section>
         <Section i={1}><dl className="kv">
-          <Item k="Price per hour" v={gbp(f.pricePerHourPence)} /><Item k="Booking length" v={`${f.minHours} to ${f.maxHours} hours`} />
+          <Item k="Hourly rate" v={gbp(f.pricePerHourPence)} /><Item k="Booking length" v={`${f.minHours} to ${f.maxHours} hours`} />
           <Item k="Deposit" v={f.depositPence ? gbp(f.depositPence) : 'From Settings'} />
           <Item k="Other prices" v={prices.length ? <div>{prices.map((p) => <div key={p.key}>{priceTypeLabel(p.kind)}: {describePrice(p)} <span className="muted small">· {eName(p.eventTypeId)}</span></div>)}</div> : 'None'} />
         </dl></Section>
@@ -287,10 +300,10 @@ function Review({ f, pics, main, prices, events, addons, eventOpts, warnings, on
           {pics.length ? <div className="vw-thumbs">{[main!, ...pics.filter((p) => p !== main)].map((p) => <img key={p.key} src={p.url} alt="" className={p === main ? 'main' : ''} />)}</div> : <span className="muted">No images</span>}
         </Section>
         <Section i={3}><dl className="kv">
-          <Item k="Status" v={<Badge status={f.operationalStatus} />} /><Item k="Location" v={[f.area, f.city].filter(Boolean).join(', ')} /><Item k="Base address" v={f.baseAddress} />
-          <Item k="Customers get it by" v={[f.stationaryAvailable && 'Collection', f.deliveryAvailable && 'Delivery'].filter(Boolean).join(' and ')} />
-          <Item k="Driving" v={[f.selfDriveAvailable && 'Self-drive', f.chauffeurAvailable && `With a driver (${gbp(f.chauffeurFeePence)}${f.chauffeurChargeType === 'hourly' ? '/h' : ''})`].filter(Boolean).join(', ')} />
-          <Item k="Events" v={events.join(', ')} /><Item k="Add-ons" v={addons.join(', ')} />
+          <Item k="Status" v={<Badge status={f.operationalStatus} />} /><Item k="Location" v={[f.area, f.city].filter(Boolean).join(', ')} />
+          <Item k="Online availability" v={AVAILABILITY_MODES.find((m) => m.value === f.availabilityMode)?.label} />
+          <Item k="Services" v={events.join(', ')} /><Item k="Extras" v={addons.join(', ')} />
+
         </dl></Section>
       </div>
     </div>

@@ -20,11 +20,11 @@ export default function CalendarPage() {
   return (
     <>
       <div className="filters">
-        <SelectField label="Car" value={vehicleId} onChange={setVehicleId} options={[{ value: 'all', label: 'All cars (week overview)' }, ...cars.map((v) => ({ value: v.id, label: `${v.make} ${v.model}` }))]} />
+        <SelectField label="Vehicle" value={vehicleId} onChange={setVehicleId} options={[{ value: 'all', label: 'All vehicles (week overview)' }, ...cars.map((v) => ({ value: v.id, label: `${v.make} ${v.model}` }))]} />
       </div>
       <ErrorBox error={error} />
       {loading && !fleet ? <Loading /> : null}
-      {fleet && !cars.length ? <Panel><Empty icon={FiChevronRight} title="No cars yet">Add a vehicle first.</Empty></Panel> : null}
+      {fleet && !cars.length ? <Panel><Empty icon={FiChevronRight} title="No vehicles yet">Add a vehicle first.</Empty></Panel> : null}
       {fleet && cars.length && vehicleId === 'all' ? <Overview cars={cars} onPick={setVehicleId} /> : null}
       {fleet && vehicleId !== 'all' ? <Panel title={(() => { const v = cars.find((c) => c.id === vehicleId); return v ? `${v.make} ${v.model}` : 'Car'; })()}><AvailabilityCalendar key={vehicleId} vehicleId={vehicleId} /></Panel> : null}
     </>
@@ -54,7 +54,7 @@ function Overview({ cars, onPick }: { cars: Veh[]; onPick: (id: string) => void 
   };
 
   return (
-    <Panel title="Fleet this week" hint="Bookings and blocked time per car. Click a cell to open that car."
+    <Panel title="Fleet this week" hint="Bookings and blocked time per vehicle. Click a cell to open that vehicle."
       action={<div className="row">
         <button className="icon-btn" style={{ width: 38, height: 38 }} aria-label="Previous week" onClick={() => setAnchor(ymd(addDays(new Date(anchor + 'T12:00:00Z'), -7)))}><FiChevronLeft /></button>
         <button className="btn sm" onClick={() => setAnchor(ymd(new Date()))}>This week</button>
@@ -64,7 +64,7 @@ function Overview({ cars, onPick }: { cars: Veh[]; onPick: (id: string) => void 
       {!cals && !err ? <Loading /> : null}
       {cals ? (
         <div className="table-wrap"><table>
-          <thead><tr><th>Car</th>{days.map((d) => <th key={d} className="num">{new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'UTC' })}</th>)}</tr></thead>
+          <thead><tr><th>Vehicle</th>{days.map((d) => <th key={d} className="num">{new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'UTC' })}</th>)}</tr></thead>
           <tbody>{cars.map((c) => (
             <tr key={c.id}>
               <td><div className="cell-title">{c.make} {c.model}</div>{c.operational_status !== 'active' ? <div className="cell-sub">{c.operational_status}</div> : null}</td>

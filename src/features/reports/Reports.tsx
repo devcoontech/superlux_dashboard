@@ -8,15 +8,15 @@ import { Empty, Panel, Tabs } from '../../components/ui';
 import { addDays, fmtDateTime, gbp, humanize, ymd } from '../../lib/format';
 
 const REPORTS = [
-  { value: 'bookings-by-event', label: 'By event', hint: 'Bookings and booking value per event type' },
-  { value: 'bookings-by-vehicle', label: 'By car', hint: 'Bookings and value per car (excludes cancelled)' },
+  { value: 'bookings-by-event', label: 'By service', hint: 'Bookings and booking value per service' },
+  { value: 'bookings-by-vehicle', label: 'By vehicle', hint: 'Bookings and value per vehicle (excludes cancelled)' },
   { value: 'payments-collected', label: 'Payments collected', hint: 'Succeeded payments per day and source' },
   { value: 'outstanding-balances', label: 'Outstanding', hint: 'Live bookings in the period with an unpaid balance' },
   { value: 'refunds', label: 'Refunds', hint: 'Refunds issued in the period' },
   { value: 'cancellations', label: 'Cancellations', hint: 'Cancelled, rejected and requested cancellations' },
-  { value: 'popular-events', label: 'Popular events', hint: 'Confirmed and completed bookings per event' },
+  { value: 'popular-events', label: 'Popular services', hint: 'Confirmed and completed bookings per service' },
   { value: 'offers', label: 'Offers', hint: 'Uses and discount given in the period' },
-  { value: 'driver-workload', label: 'Driver workload', hint: 'Active assignments and hours for bookings in the period' },
+  { value: 'driver-workload', label: 'Chauffeur workload', hint: 'Active assignments and hours for bookings in the period' },
 ] as const;
 
 const cell = (k: string, v: unknown) => {

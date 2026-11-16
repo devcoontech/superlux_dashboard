@@ -7,8 +7,10 @@ import { useTheme } from '../lib/theme';
 export type NavItem = { key: string; label: string; icon: IconType; count?: number };
 
 export function Shell({
-  portal, nav, active, onNavigate, title, sub, user, onSignOut, search, onSearch, actions, children,
+  portal, nav, active, onNavigate, title, sub, user, onSignOut, search, onSearch, actions, children, logoUrl,
 }: {
+  /** A logo uploaded in Settings > Business for dark backgrounds; the wordmark otherwise. */
+  logoUrl?: string | null;
   portal: string;
   nav: NavItem[];
   active: string;
@@ -34,8 +36,8 @@ export function Shell({
     <div className="shell">
       {menuOpen ? <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} aria-hidden="true" /> : null}
       <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="sidebar">
-        <a className="brand" href="#/" aria-label="Supercarstars home">
-          <img src="/wordmark.png" alt="Supercarstars.com" />
+        <a className="brand" href="#/" aria-label="Superluxe Chauffeurs dashboard home">
+          <img src={logoUrl || "/wordmark.svg"} alt="Superluxe Chauffeurs" />
         </a>
         <span className="portal-tag">{portal}</span>
         <nav className="nav" aria-label={portal}>

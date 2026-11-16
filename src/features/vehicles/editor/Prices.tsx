@@ -25,7 +25,7 @@ export type PriceBody = Omit<Price, 'id'>;
 type Opt = { id: string; name: string };
 
 export const PRICE_TYPES: { value: PriceKind; label: string; help: string }[] = [
-  { value: 'hourly', label: 'Per hour', help: 'A different hourly rate, usually for one event' },
+  { value: 'hourly', label: 'Per hour', help: 'A different hourly rate, usually for one service' },
   { value: 'package', label: 'Package (fixed hours)', help: 'A set price for a block of hours, e.g. half day or full day' },
   { value: 'extra_hour', label: 'Extra hour', help: 'Charged for each hour beyond a package' },
   { value: 'daily', label: 'Per day', help: 'Price for each whole day (24 hours) when a customer books by the day. Without it, a day is charged as 24 hours at the hourly rate.' },
@@ -75,8 +75,8 @@ export function VehiclePrices({ vehicleId, events }: { vehicleId: string; events
 export function PriceTable<T extends PriceBody & { id?: string }>({ items, events, onEdit, onDelete, onToggle }: {
   items: T[]; events: Opt[]; onEdit: (p: T) => void; onDelete: (p: T) => void; onToggle?: (p: T, active: boolean) => void;
 }) {
-  const eName = (id: string | null) => (id ? events.find((e) => e.id === id)?.name ?? 'Unknown event' : 'Every event');
-  if (!items.length) return <Empty icon={FiTag} title="Only the base hourly rate">Add a package, an event rate or another price type if this car needs one.</Empty>;
+  const eName = (id: string | null) => (id ? events.find((e) => e.id === id)?.name ?? 'Unknown service' : 'Every service');
+  if (!items.length) return <Empty icon={FiTag} title="Only the base hourly rate">Add a package, a service rate or another price type if this vehicle needs one.</Empty>;
   return (
     <div className="table-wrap" style={{ margin: 0 }}>
       <table>
@@ -141,8 +141,8 @@ export function PriceForm({ price, events, onClose, onSubmit, done = 'Price save
       footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save price'}</button></>}>
       <SelectField label="Price type" value={kind} onChange={(v) => setKind(v as PriceKind)} disabled={!!price}
         hint={PRICE_TYPES.find((t) => t.value === kind)?.help} options={PRICE_TYPES.map(({ value, label }) => ({ value, label }))} />
-      <SelectField label="Applies to" value={eventTypeId} onChange={setEventTypeId} hint="Leave on Every event unless this price is only for one event"
-        options={[{ value: '', label: 'Every event' }, ...events.map((ev) => ({ value: ev.id, label: ev.name }))]} />
+      <SelectField label="Applies to" value={eventTypeId} onChange={setEventTypeId} hint="Leave on Every service unless this price is only for one service"
+        options={[{ value: '', label: 'Every service' }, ...events.map((ev) => ({ value: ev.id, label: ev.name }))]} />
       <TextField label="Name shown to customers (optional)" value={label} onChange={setLabel} placeholder={kind === 'package' ? 'e.g. Full day' : kind === 'special_date' ? 'e.g. Christmas week' : ''} />
       {kind === 'package' ? <NumberField label="Hours in the package *" value={hours} onChange={setHours} min={1} error={e('hours')} /> : null}
       {kind !== 'special_date' ? <MoneyField label={kind === 'package' ? 'Package price *' : kind === 'per_mile' ? 'Price per mile *' : kind === 'extra_hour' ? 'Price per extra hour *' : kind === 'daily' ? 'Price per day *' : 'Price per hour *'} value={amount} onChange={setAmount} error={e('amount')} /> : null}

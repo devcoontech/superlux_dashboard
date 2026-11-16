@@ -54,7 +54,7 @@ function ExistingVehicle({ id }: { id: string }) {
 
       <Tabs value={tab} onChange={(t) => { setError(null); setTab(t); }} items={[
         { value: 'details', label: 'Details' }, { value: 'pricing', label: 'Pricing' }, { value: 'images', label: 'Images', count: data?.images.length },
-        { value: 'events', label: 'Events' }, { value: 'addons', label: 'Add-ons' }, { value: 'availability', label: 'Availability' }, { value: 'history', label: 'Bookings' },
+        { value: 'events', label: 'Services' }, { value: 'addons', label: 'Extras' }, { value: 'availability', label: 'Availability' }, { value: 'history', label: 'Bookings' },
       ]} />
 
       {tab === 'details' && data ? <Details key={data.id + ':' + data.updated_at} row={data} onSaved={() => reload()} /> : null}
@@ -62,7 +62,7 @@ function ExistingVehicle({ id }: { id: string }) {
       {tab === 'events' && data ? <EventsTab row={data} events={(ev?.items ?? []).filter((e) => !e.archived_at)} reload={reload} /> : null}
       {tab === 'addons' && data ? <AddonsTab row={data} reload={reload} /> : null}
       {tab === 'pricing' && data ? (
-        <Panel title="Pricing" hint={`Standard price ${gbp(data.price_per_hour_pence)} per hour, ${data.min_hours} to ${data.max_hours} hours (change it on the Details tab). Add other price types below.`}>
+        <Panel title="Pricing" hint={`Hourly rate ${gbp(data.price_per_hour_pence)}, ${data.min_hours} to ${data.max_hours} hours (change it on the Details tab). Mileage beyond the allowance is added to every journey (Settings). Add other price types below.`}>
           <VehiclePrices vehicleId={id} events={(ev?.items ?? []).filter((e) => !e.archived_at).map((e) => ({ id: e.id, name: e.title }))} />
         </Panel>
       ) : null}
@@ -72,7 +72,7 @@ function ExistingVehicle({ id }: { id: string }) {
       {preview && data ? <Preview row={data} events={(ev?.items ?? []).filter((e) => data.event_type_ids.includes(e.id))} onClose={() => setPreview(false)} /> : null}
       {confirmDelete && data ? (
         <ConfirmDialog title="Delete this vehicle?" danger confirmLabel="Delete vehicle"
-          message="It is removed from the fleet and the public site. Past bookings keep their history. This is refused while upcoming bookings exist."
+          message="It is removed from the fleet and the website. Past bookings keep their history. This is refused while upcoming bookings exist."
           onConfirm={async () => { await api(`/vehicles/${id}`, { method: 'DELETE' }); go('vehicles'); }} onClose={() => setConfirmDelete(false)} />
       ) : null}
     </>

@@ -44,7 +44,7 @@ export function Images({ row, reload }: { row: Row; reload: () => void }) {
       </div>
       <ErrorBox error={error} />
       {failed.length ? <div className="error-box" style={{ marginTop: 12, flexDirection: 'column', alignItems: 'flex-start' }}>{failed.map((f) => <div key={f.filename}><b>{f.filename}</b>: {f.reason}</div>)}</div> : null}
-      {!row.images.length ? <Empty icon={FiUploadCloud} title="No images yet">A published car needs at least one image.</Empty> : (
+      {!row.images.length ? <Empty icon={FiUploadCloud} title="No images yet">A published vehicle needs at least one image.</Empty> : (
         <div className="img-grid" style={{ marginTop: 18 }}>
           {row.images.map((im, i) => (
             <div className="img-card" key={im.id}>
@@ -60,7 +60,7 @@ export function Images({ row, reload }: { row: Row; reload: () => void }) {
           ))}
         </div>
       )}
-      {delImg ? <ConfirmDialog title="Delete this image?" danger confirmLabel="Delete" message={delImg.isCover ? 'This is the cover image. The next image becomes the cover; with no images left the car is unpublished.' : undefined}
+      {delImg ? <ConfirmDialog title="Delete this image?" danger confirmLabel="Delete" message={delImg.isCover ? 'This is the cover image. The next image becomes the cover; with no images left the vehicle is unpublished.' : undefined}
         onConfirm={async () => { await api(`/vehicles/${row.id}/images/${delImg.id}`, { method: 'DELETE' }); reload(); }} onClose={() => setDelImg(null)} /> : null}
     </Panel>
   );

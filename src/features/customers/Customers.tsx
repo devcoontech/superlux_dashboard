@@ -71,7 +71,7 @@ function Body({ d, onSaved }: { d: Detail; onSaved: () => void }) {
         <TextField label="Name" value={name} onChange={setName} error={fieldErrors['name']} />
         <TextField label="Phone" value={phone} onChange={setPhone} />
       </div>
-      <div className="muted small">To use the app, the customer signs in with <b>{d.email}</b>. If they have never set a password, they tap “Forgot your password?” and we email them a code.</div>
+      <div className="muted small">Website customers book as guests: they find a booking under Manage Booking with its reference and <b>{d.email}</b>.</div>
       <ErrorBox error={error} />
       <div><button className="btn gold" disabled={busy || !dirty || !name.trim()} onClick={() => run(async () => {
         await api(`/customers/${d.id}`, { method: 'PATCH', body: { name: name.trim(), phone: phone.trim() || null } });
@@ -101,10 +101,10 @@ function AddCustomer({ onClose, onCreated }: { onClose: () => void; onCreated: (
   };
   return (
     <Drawer title="Add customer" onClose={() => (created ? onCreated(created.id) : onClose())} footer={created ? <button className="btn gold" onClick={() => onCreated(created.id)}>Done</button> : <><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy || !name.trim() || !email.trim()} onClick={create}>{busy ? 'Creating…' : 'Create'}</button></>}>
-      {created ? <div className="note">Customer created. To use the app, they sign in with <b>{created.email}</b>: they tap “Forgot your password?”, we email them a code, and they choose their own password.</div> : (
+      {created ? <div className="note">Customer created. Booking emails go to <b>{created.email}</b>.</div> : (
         <>
           <TextField label="Name *" value={name} onChange={setName} error={fieldErrors['name']} />
-          <TextField label="Email *" type="email" value={email} onChange={setEmail} error={fieldErrors['email']} hint="They use this email to sign in to the app later" />
+          <TextField label="Email *" type="email" value={email} onChange={setEmail} error={fieldErrors['email']} hint="Booking confirmations and payment links are sent here" />
           <TextField label="Phone" value={phone} onChange={setPhone} />
           <ErrorBox error={error} />
         </>

@@ -6,7 +6,7 @@ import { useAction, useDebounced } from '../../lib/hooks';
 import { ErrorBox } from '../../components/feedback';
 import { Drawer } from '../../components/ui';
 import { addDays, fmtDate, gbp, ymd } from '../../lib/format';
-/** The "New booking" drawer: pick a customer, then one or more cars, and see the price before saving. */
+/** The "New booking" drawer: pick a customer, then one or more journeys (a return is a second journey), and see the price before saving. */
 
 type Cust = { id: string; name: string; email: string; phone: string | null; bookings?: number; lastBookingAt?: string | null };
 
@@ -83,9 +83,12 @@ function CustomerPicker({ onPick }: { onPick: (c: Cust, isNew?: boolean) => void
   );
 }
 
-type ItemDraft = { key: number; vehicleId: string; eventTypeId: string; date: string; time: string; hours: number | null; experience: string; driverOption: string; address: string; pickup: string; dropoff: string; qty: Record<string, number> };
+type ItemDraft = {
+  key: number; vehicleId: string; eventTypeId: string; date: string; time: string; hours: number | null; experience: string; driverOption: string; address: string; pickup: string; dropoff: string; qty: Record<string, number>;
+  leg: '' | 'outbound' | 'return'; stops: string; flight: string; terminal: string; passengers: number | null; large: number | null; small: number | null;
+};
 
-type EventOpt = { id: string; title: string; archived_at: string | null; pricing_basis: string };
+type EventOpt = { id: string; title: string; archived_at: string | null; pricing_basis: string; min_hours: number | null; slug: string };
 
 type QuoteLine = { key: string; label: string; amountPence: number };
 
@@ -97,14 +100,19 @@ type OrderQuote = {
 
 let nextKey = 1;
 const blankItem = (from?: ItemDraft): ItemDraft => ({
-  key: nextKey++, vehicleId: '', eventTypeId: from?.eventTypeId ?? '', date: from?.date ?? ymd(addDays(new Date(), 7)), time: from?.time ?? '11:00', hours: from?.hours ?? 2,
+  key: nextKey++, vehicleId: '', eventTypeId: from?.eventTypeId ?? '', date: from?.date ?? ymd(addDays(new Date(), 7)), time: from?.time ?? '11:00', hours: from?.hours ?? 3,
   experience: from?.experience ?? 'stationary', driverOption: '', address: from?.address ?? '', pickup: '', dropoff: '', qty: {},
+  leg: '', stops: '', flight: '', terminal: '', passengers: from?.passengers ?? 1, large: from?.large ?? 0, small: from?.small ?? 0,
+});
+/** The return leg of a journey: same vehicle and party, the route reversed, later the same day by default. */
+const returnOf = (o: ItemDraft): ItemDraft => ({
+  ...blankItem(o), vehicleId: o.vehicleId, driverOption: o.driverOption, pickup: o.dropoff, dropoff: o.pickup, leg: 'return', time: o.time < '18:00' ? '18:00' : o.time,
 });
 
 /** Which driving arrangements a car offers, and the one to use (a car offering only one selects it). */
 const driverChoicesFor = (veh: FleetCar | undefined, isDistance: boolean) => [
-  ...(veh?.chauffeur_available || isDistance ? [{ value: 'with_driver', label: 'With driver' }] : []),
-  ...(veh?.self_drive_available && !isDistance ? [{ value: 'self_drive', label: 'Without driver (self-drive)' }] : []),
+  ...(veh?.chauffeur_available || isDistance ? [{ value: 'with_driver', label: 'With chauffeur' }] : []),
+  ...(veh?.self_drive_available && !isDistance ? [{ value: 'self_drive', label: 'Without chauffeur (self-drive)' }] : []),
 ];
 
 const driverFor = (it: ItemDraft, veh: FleetCar | undefined, isDistance: boolean) => {
@@ -118,34 +126,42 @@ function VehicleItem({ it, n, count, fleet, events, extras, today, maxDate, buff
   quote?: OrderQuote['items'][number]; onChange: (patch: Partial<ItemDraft>) => void; onRemove: () => void;
 }) {
   const veh = fleet.find((v) => v.id === it.vehicleId);
-  const isDistance = events.find((e) => e.id === it.eventTypeId)?.pricing_basis === 'distance';
+  const svc = events.find((e) => e.id === it.eventTypeId);
+  const isDistance = svc?.pricing_basis === 'distance' || svc?.pricing_basis === 'transfer';
+  const hourly = !svc || svc.pricing_basis === 'hourly';
   const choices = driverChoicesFor(veh, isDistance);
   const driver = driverFor(it, veh, isDistance);
   const offered = extras.filter((a) => a.active && it.vehicleId && (a.allVehicles || a.vehicleIds.includes(it.vehicleId)));
   return (
     <div className="panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="row between"><b>Vehicle {n + 1}{veh ? `: ${veh.make} ${veh.model}` : ''}</b>{count > 1 ? <button className="btn sm danger" onClick={onRemove}>Remove</button> : null}</div>
-      <SelectField label="Car *" value={it.vehicleId} onChange={(v) => onChange({ vehicleId: v, qty: {} })} options={[{ value: '', label: 'Choose a car' }, ...fleet.filter((v) => v.operational_status === 'active').map((v) => ({ value: v.id, label: `${v.make} ${v.model}` }))]} />
-      <SelectField label="Event" value={it.eventTypeId} onChange={(v) => onChange({ eventTypeId: v })} options={[{ value: '', label: 'None' }, ...events.filter((e) => !e.archived_at).map((e) => ({ value: e.id, label: e.title }))]} />
+      <div className="row between"><b>{it.leg === 'return' ? 'Return journey' : `Journey ${n + 1}`}{veh ? `: ${veh.make} ${veh.model}` : ''}</b>{count > 1 ? <button className="btn sm danger" onClick={onRemove}>Remove</button> : null}</div>
+      <SelectField label="Service *" value={it.eventTypeId} onChange={(v) => onChange({ eventTypeId: v })} options={[{ value: '', label: 'Choose a service' }, ...events.filter((e) => !e.archived_at).map((e) => ({ value: e.id, label: e.title }))]} />
+      <SelectField label="Vehicle *" value={it.vehicleId} onChange={(v) => onChange({ vehicleId: v, qty: {} })} options={[{ value: '', label: 'Choose a vehicle' }, ...fleet.filter((v) => v.operational_status === 'active').map((v) => ({ value: v.id, label: `${v.make} ${v.model}` }))]} />
+      <TextField label="Pick-up *" value={it.pickup} onChange={(v) => onChange({ pickup: v })} placeholder="Address, postcode or airport" />
+      {!hourly ? <TextField label="Drop-off *" value={it.dropoff} onChange={(v) => onChange({ dropoff: v })} placeholder="Address, postcode or airport" hint="The route is measured on the map; miles beyond the allowance are added to the price" /> : null}
+      <TextField label="Stops on the way" value={it.stops} onChange={(v) => onChange({ stops: v })} />
+      <div className="form-grid">
+        <TextField label="Flight number" value={it.flight} onChange={(v) => onChange({ flight: v.toUpperCase() })} placeholder="e.g. BA117" />
+        <TextField label="Terminal" value={it.terminal} onChange={(v) => onChange({ terminal: v })} />
+        <NumberField label="Passengers" value={it.passengers} onChange={(v) => onChange({ passengers: v })} min={1} max={60} />
+        <NumberField label="Large bags" value={it.large} onChange={(v) => onChange({ large: v })} min={0} max={60} />
+        <NumberField label="Small bags" value={it.small} onChange={(v) => onChange({ small: v })} min={0} max={60} />
+      </div>
       <div className="form-grid">
         <TextField label="Date *" type="date" value={it.date} onChange={(v) => onChange({ date: v })} min={today} max={maxDate} error={it.date < today ? 'Choose today or a later date' : undefined} />
-        <TextField label="Start time *" type="time" value={it.time} onChange={(v) => onChange({ time: v })} hint={`On the hour. ${buffer} minutes are kept free before and after.`} />
+        <TextField label="Pick-up time *" type="time" value={it.time} onChange={(v) => onChange({ time: v })} hint={`On the hour or a quarter hour. ${buffer} minutes are kept free before and after.`} />
         <SelectField label="Book by" value={(it.hours ?? 0) >= 24 ? 'day' : 'hour'} onChange={(v) => onChange({ hours: v === 'day' ? 24 : (veh?.min_hours ?? 1) })}
           options={[{ value: 'hour', label: 'The hour' }, { value: 'day', label: 'The day (24 hours)' }]} />
         {(it.hours ?? 0) >= 24 ? (
           <NumberField label="Days *" value={(it.hours ?? 24) / 24} onChange={(v) => onChange({ hours: v ? v * 24 : null })} min={1} max={60} hint="Ends at the same time on the last day" />
         ) : (
-          <NumberField label="Hours *" value={it.hours} onChange={(v) => onChange({ hours: v })} min={veh?.min_hours ?? 1} max={veh?.max_hours} />
+          <NumberField label="Hours *" value={it.hours} onChange={(v) => onChange({ hours: v })} min={veh?.min_hours ?? 1} max={veh?.max_hours}
+            hint={!hourly ? `Operational hours charged${svc?.min_hours ? ` (at least ${svc.min_hours})` : ''}` : undefined} />
         )}
-        <SelectField label="Driver *" value={driver} onChange={(v) => onChange({ driverOption: v })} disabled={choices.length < 2}
-          options={choices.length === 1 ? choices : [{ value: '', label: it.vehicleId ? 'Choose' : 'Choose a car first' }, ...choices]} />
+        <SelectField label="Chauffeur *" value={driver} onChange={(v) => onChange({ driverOption: v })} disabled={choices.length < 2}
+          options={choices.length === 1 ? choices : [{ value: '', label: it.vehicleId ? 'Choose' : 'Choose a vehicle first' }, ...choices]} />
       </div>
-      {isDistance ? (
-        <>
-          <TextField label="Pick-up address *" value={it.pickup} onChange={(v) => onChange({ pickup: v })} />
-          <TextField label="Drop-off address *" value={it.dropoff} onChange={(v) => onChange({ dropoff: v })} hint="Priced by road distance. A driver is included." />
-        </>
-      ) : (
+      {isDistance || !veh?.delivery_available ? null : (
         <>
           <SelectField label="Collection" value={it.experience} onChange={(v) => onChange({ experience: v })} options={[
             ...(veh && !veh.stationary_available ? [] : [{ value: 'stationary', label: 'Collect from showroom' }]),
@@ -161,7 +177,7 @@ function VehicleItem({ it, n, count, fleet, events, extras, today, maxDate, buff
       )}
       {offered.length ? (
         <div className="field">
-          <label>Add-ons</label>
+          <label>Extras</label>
           {offered.map((a) => {
             const unit = a.pricingType === 'per_hour' ? `${gbp(a.pricePence)}/h` : gbp(a.pricePence);
             return a.maxQuantity > 1 ? (
@@ -209,9 +225,17 @@ export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCrea
       vehicleId: i.vehicleId, eventTypeId: i.eventTypeId || null, date: i.date, time: i.time, hours: i.hours, experience: isDistance ? 'stationary' : i.experience,
       driverOption: driverFor(i, veh, isDistance) || null, address: i.address || null, pickupAddress: i.pickup || null, dropoffAddress: i.dropoff || null,
       addons: offered.filter((a) => i.qty[a.id]).map((a) => ({ id: a.id, quantity: i.qty[a.id] })),
+      journey: {
+        leg: i.leg || (items.some((x) => x.leg === 'return') ? 'outbound' : null), journeyType: items.some((x) => x.leg === 'return') ? 'return' : 'one_way',
+        stops: i.stops.trim() || null, flightNumber: i.flight.trim() || null, terminal: i.terminal.trim() || null,
+        passengers: i.passengers, luggageLarge: i.large, luggageSmall: i.small, leadPassengerName: customer?.name ?? null, leadPassengerPhone: customer?.phone ?? null,
+      },
     };
   };
-  const complete = items.every((i) => i.vehicleId && i.hours && i.date >= today && driverFor(i, cars.find((v) => v.id === i.vehicleId), events.find((e) => e.id === i.eventTypeId)?.pricing_basis === 'distance'));
+  const basisOf = (i: ItemDraft) => events.find((e) => e.id === i.eventTypeId)?.pricing_basis;
+  const isJourney = (i: ItemDraft) => basisOf(i) === 'distance' || basisOf(i) === 'transfer';
+  const complete = items.every((i) => i.vehicleId && i.eventTypeId && i.hours && i.date >= today && i.pickup.trim() && (!isJourney(i) || i.dropoff.trim())
+    && driverFor(i, cars.find((v) => v.id === i.vehicleId), isJourney(i)));
 
   // Live price from the server (same engine as the booking), refreshed as the vehicles change.
   const quoteKey = complete ? JSON.stringify({ items: items.map(body), customerId: customer?.id }) : '';
@@ -245,7 +269,7 @@ export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCrea
             <div className="small">{customer.email}{customer.phone ? ` · ${customer.phone}` : ''}</div>
             {customer.bookings != null ? <div className="muted small">{customer.bookings ? `${customer.bookings} previous booking${customer.bookings === 1 ? '' : 's'}` : 'First booking'}</div> : null}
           </div>
-          {newCustomer ? <div className="note">New customer. To use the app later, they sign in with <b>{customer.email}</b> using “Forgot your password?” to set their own password.</div> : null}
+          {newCustomer ? <div className="note">New customer. Emails about this booking go to <b>{customer.email}</b>; they can check it on the website under Manage Booking with its reference.</div> : null}
         </div>
       ) : <CustomerPicker onPick={(c, isNew) => { setCustomer(c); setNewCustomer(!!isNew); }} />}
 
@@ -253,14 +277,20 @@ export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCrea
         <VehicleItem key={it.key} it={it} n={n} count={items.length} fleet={cars} events={events} extras={extras?.items ?? []} today={today} maxDate={maxDate}
           buffer={buffer} quote={quote?.items[n]} onChange={(patch) => update(it.key, patch)} onRemove={() => setItems((p) => p.filter((x) => x.key !== it.key))} />
       ))}
-      {items.length < maxVehicles ? <button className="btn" style={{ alignSelf: 'flex-start' }} onClick={() => setItems((p) => [...p, blankItem(p[p.length - 1])])}><FiPlus /> Add another vehicle</button> : null}
+      {items.length < maxVehicles ? (
+        <div className="row wrap">
+          {items.length === 1 && isJourney(items[0]) && items[0].pickup && items[0].dropoff ? <button className="btn" onClick={() => setItems((p) => [p[0], returnOf(p[0])])}><FiPlus /> Add return journey</button> : null}
+          <button className="btn" onClick={() => setItems((p) => [...p, blankItem(p[p.length - 1])])}><FiPlus /> Add another vehicle</button>
+        </div>
+      ) : null}
 
-      <SelectField label="Start as" value={initialStatus} onChange={setInitialStatus} hint="'Confirmed' holds the cars without payment and is recorded in the history. Record cash or card payments on the booking page."
-        options={[{ value: 'awaiting_payment', label: 'Awaiting payment' }, { value: 'pending', label: 'Pending review' }, { value: 'confirmed', label: 'Confirmed (no payment yet)' }]} />
+      <SelectField label="Start as" value={initialStatus} onChange={setInitialStatus} hint="The booking is confirmed once the deposit is received. Record cash or card payments on the booking page."
+        options={[{ value: 'awaiting_payment', label: 'Awaiting payment' }, { value: 'pending', label: 'Pending review' }, ...(cfg?.settings['payment.allowUnpaidConfirmation'] === true ? [{ value: 'confirmed', label: 'Confirmed (no payment yet)' }] : [])]} />
 
       <div className="panel" style={{ padding: 16 }}>
         <div className="strong" style={{ marginBottom: 8 }}>Price (worked out by the server)</div>
-        {!complete ? <span className="muted small">Choose a car, time and driver option for every vehicle to see the price.</span> : null}
+        {!complete ? <span className="muted small">Choose a service, vehicle, pick-up (and drop-off for journeys) and time to see the price.</span> : null}
+
         <ErrorBox error={quoteError} />
         {o ? (
           <dl className="kv" style={{ gridTemplateColumns: '1fr auto' }}>
