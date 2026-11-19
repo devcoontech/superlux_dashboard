@@ -65,7 +65,7 @@ const tone: Record<string, string> = {
   cancelled: 'bad', rejected: 'bad', failed: 'bad', payment_failed: 'bad', canceled: 'bad',
   deposit_paid: 'info', refund_pending: 'warn', void: 'mute',
   // Enquiries
-  new: 'warn', quoted: 'info', converted: 'good', closed: 'mute',
+  new: 'warn', quoted: 'info', converted: 'good', closed: 'mute', contacted: 'info', interested: 'info', follow_up: 'warn', lost: 'bad',
 };
 
 const labels: Record<string, string> = {
@@ -81,6 +81,7 @@ const labels: Record<string, string> = {
   en_route: 'En route to pick-up',
   arrived: 'Arrived at pick-up',
   converted: 'Booked',
+  follow_up: 'Follow-up required',
 };
 
 export function Badge({ status, label }: { status: string; label?: string }) {

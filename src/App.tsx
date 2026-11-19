@@ -1,4 +1,4 @@
-import { FiBarChart2, FiCalendar, FiClipboard, FiCreditCard, FiGrid, FiInbox, FiPackage, FiPercent, FiSettings, FiStar, FiTruck, FiUser, FiUsers, FiNavigation, FiFileText } from 'react-icons/fi';
+import { FiBarChart2, FiCalendar, FiClipboard, FiCreditCard, FiGrid, FiInbox, FiPackage, FiPercent, FiSettings, FiStar, FiTruck, FiUser, FiUsers, FiNavigation, FiFileText, FiMessageSquare } from 'react-icons/fi';
 import { useEffect, useState } from 'react';
 import { useApi } from './lib/api';
 import { useAuth } from './features/auth/auth';
@@ -22,13 +22,15 @@ import Reports from './features/reports/Reports';
 import Settings from './features/settings/Settings';
 import Airports from './features/airports/Airports';
 import Terms from './features/terms/Terms';
+import Chatbot from './features/chatbot/Chatbot';
 import VehicleEditor from './features/vehicles/VehicleEditor';
 import Vehicles from './features/vehicles/Vehicles';
 
 const titles: Record<string, [string, string]> = {
   overview: ['Overview', 'How the business is doing'],
   bookings: ['Bookings', 'Journey requests, upcoming journeys and history'],
-  enquiries: ['Enquiries', 'Messages and quote requests from the website'],
+  enquiries: ['Enquiries', 'Leads, messages and quote requests from the website and the chat assistant'],
+  chatbot: ['Chat assistant', 'The website AI assistant: results, conversations and settings'],
   vehicles: ['Fleet', 'Vehicles, photos and availability'],
   calendar: ['Calendar', 'Who has which vehicle, and when'],
   events: ['Services', 'The chauffeur services customers can book'],
@@ -83,6 +85,7 @@ function Portal() {
     { key: 'customers', label: 'Customers', icon: FiUsers },
     { key: 'reports', label: 'Reports', icon: FiBarChart2 },
     { key: 'terms', label: 'Terms & Conditions', icon: FiFileText },
+    ...(['owner', 'administrator'].includes(staff!.role) ? [{ key: 'chatbot', label: 'Chat assistant', icon: FiMessageSquare }] : []),
     { key: 'settings', label: 'Settings', icon: FiSettings },
   ];
   const [title, sub] = page === 'vehicles' && id === 'new' ? ['Add a vehicle', 'A few short steps, then publish'] : page === 'vehicles' && id ? ['Vehicle', 'Edit details, photos, services, pricing and availability'] : page === 'bookings' && id ? ['Booking', 'Journey, payments, chauffeur and history'] : titles[page] ?? titles.overview;
@@ -99,6 +102,7 @@ function Portal() {
       {page === 'addons' ? <Addons /> : null}
       {page === 'airports' ? <Airports /> : null}
       {page === 'terms' ? <Terms /> : null}
+      {page === 'chatbot' ? <Chatbot /> : null}
       {page === 'drivers' ? <Drivers /> : null}
       {page === 'payments' ? <Payments /> : null}
       {page === 'offers' ? <Offers /> : null}

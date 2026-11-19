@@ -6,6 +6,7 @@ import { useAction, useDebounced } from '../../lib/hooks';
 import { ErrorBox } from '../../components/feedback';
 import { Drawer } from '../../components/ui';
 import { addDays, fmtDate, gbp, ymd } from '../../lib/format';
+import type { Enquiry } from '../enquiries/Enquiries';
 /** The "New booking" drawer: pick a customer, then one or more journeys (a return is a second journey), and see the price before saving. */
 
 type Cust = { id: string; name: string; email: string; phone: string | null; bookings?: number; lastBookingAt?: string | null };
@@ -15,8 +16,8 @@ type FleetCar = { id: string; make: string; model: string; operational_status: s
 type AdminAddon = { id: string; name: string; pricePence: number; active: boolean; pricingType: 'fixed' | 'per_hour' | 'per_unit'; maxQuantity: number; allVehicles: boolean; vehicleIds: string[] };
 
 /** Search existing customers by name, email or phone; pick one with the mouse or the keyboard. */
-function CustomerPicker({ onPick }: { onPick: (c: Cust, isNew?: boolean) => void }) {
-  const [q, setQ] = useState('');
+function CustomerPicker({ onPick, initial }: { onPick: (c: Cust, isNew?: boolean) => void; initial?: { name: string; email: string; phone: string } }) {
+  const [q, setQ] = useState(initial?.email || initial?.phone || '');
   const [active, setActive] = useState(0);
   const dq = useDebounced(q);
   const { data: found, loading } = useApi<{ items: Cust[] }>(dq.trim().length >= 2 ? '/customers' + qs({ q: dq.trim(), limit: 8 }) : null);
@@ -25,6 +26,7 @@ function CustomerPicker({ onPick }: { onPick: (c: Cust, isNew?: boolean) => void
   const items = dq.trim().length >= 2 ? found?.items ?? [] : [];
 
   const startCreate = () => {
+    if (initial) { setCreating({ ...initial }); return; }
     const t = q.trim();
     setCreating({ name: /@|\d{4,}/.test(t) ? '' : t, email: t.includes('@') ? t : '', phone: /^[+\d\s()-]{6,}$/.test(t) ? t : '' });
   };
@@ -200,7 +202,14 @@ function VehicleItem({ it, n, count, fleet, events, extras, today, maxDate, buff
   );
 }
 
-export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+/** The journey a website enquiry asked for, as the first item of a new booking. */
+const itemFromEnquiry = (e: Enquiry): ItemDraft => ({
+  ...blankItem(), vehicleId: e.vehicleId ?? '', pickup: e.pickup ?? '', dropoff: e.dropoff ?? '',
+  ...(e.requestedDate ? { date: e.requestedDate } : {}), ...(e.requestedTime ? { time: e.requestedTime.slice(0, 5) } : {}),
+  ...(e.passengers ? { passengers: e.passengers } : {}),
+});
+
+export function NewBooking({ onClose, onCreated, fromEnquiry }: { onClose: () => void; onCreated: (id: string) => void; fromEnquiry?: Enquiry }) {
   const { data: fleet } = useApi<{ items: FleetCar[] }>('/vehicles?limit=200');
   const { data: ev } = useApi<{ items: EventOpt[] }>('/event-types');
   const { data: extras } = useApi<{ items: AdminAddon[] }>('/addons');
@@ -210,12 +219,18 @@ export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCrea
   const today = ymd(new Date());
   const maxDate = ymd(addDays(new Date(), Number(cfg?.settings['booking.maxAdvanceDays'] ?? 365)));
   const maxVehicles = Number(cfg?.settings['booking.maxVehiclesPerOrder'] ?? 10);
-  const [items, setItems] = useState<ItemDraft[]>(() => [blankItem()]);
+  const [items, setItems] = useState<ItemDraft[]>(() => [fromEnquiry ? itemFromEnquiry(fromEnquiry) : blankItem()]);
   const [initialStatus, setInitialStatus] = useState('awaiting_payment');
   const { run, busy, error } = useAction();
   const buffer = Number(cfg?.settings['booking.bufferMinutes'] ?? 60);
   const events = ev?.items ?? [];
   const cars = fleet?.items ?? [];
+  // The enquiry names its service by title; select that service once the list has loaded.
+  useEffect(() => {
+    const svc = fromEnquiry?.service?.trim().toLowerCase();
+    const match = svc ? events.find((x) => !x.archived_at && (x.title.toLowerCase() === svc || x.slug === svc)) : undefined;
+    if (match) setItems((p) => p.map((i, n) => (n === 0 && !i.eventTypeId ? { ...i, eventTypeId: match.id } : i)));
+  }, [ev, fromEnquiry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const body = (i: ItemDraft) => {
     const veh = cars.find((v) => v.id === i.vehicleId);
@@ -252,7 +267,7 @@ export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCrea
   const update = (key: number, patch: Partial<ItemDraft>) => setItems((p) => p.map((i) => (i.key === key ? { ...i, ...patch } : i)));
   const create = async () => {
     const r = await run(() => api<{ bookingId: string }>('/orders', { body: {
-      customerId: customer!.id, items: items.map(body), initialStatus,
+      customerId: customer!.id, items: items.map(body), initialStatus, enquiryId: fromEnquiry?.id ?? null,
     } }), items.length > 1 ? `Booking created with ${items.length} vehicles` : 'Booking created');
     if (r) onCreated(r.bookingId);
   };
@@ -260,7 +275,7 @@ export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCrea
   const allAvailable = !quote || quote.items.every((i) => i.available);
 
   return (
-    <Drawer title="New booking" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy || !customer || !complete || !allAvailable} onClick={create}>{busy ? 'Creating…' : items.length > 1 ? `Create booking (${items.length} vehicles)` : 'Create booking'}</button></>}>
+    <Drawer title={fromEnquiry ? `New booking from ${fromEnquiry.ref}` : 'New booking'} onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn gold" disabled={busy || !customer || !complete || !allAvailable} onClick={create}>{busy ? 'Creating…' : items.length > 1 ? `Create booking (${items.length} vehicles)` : 'Create booking'}</button></>}>
       {customer ? (
         <div className="field">
           <label>Customer *</label>
@@ -271,7 +286,8 @@ export function NewBooking({ onClose, onCreated }: { onClose: () => void; onCrea
           </div>
           {newCustomer ? <div className="note">New customer. Emails about this booking go to <b>{customer.email}</b>; they can check it on the website under Manage Booking with its reference.</div> : null}
         </div>
-      ) : <CustomerPicker onPick={(c, isNew) => { setCustomer(c); setNewCustomer(!!isNew); }} />}
+      ) : <CustomerPicker initial={fromEnquiry ? { name: fromEnquiry.name, email: fromEnquiry.email ?? '', phone: fromEnquiry.phone ?? '' } : undefined} onPick={(c, isNew) => { setCustomer(c); setNewCustomer(!!isNew); }} />}
+      {fromEnquiry?.message ? <div className="note small"><b>Enquiry message:</b> {fromEnquiry.message}</div> : null}
 
       {items.map((it, n) => (
         <VehicleItem key={it.key} it={it} n={n} count={items.length} fleet={cars} events={events} extras={extras?.items ?? []} today={today} maxDate={maxDate}
